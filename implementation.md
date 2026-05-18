@@ -44,7 +44,8 @@ Each tier lists: **scope**, **deliverables**, **test strategy**, and
 > Lives in `knowledge-graph-starter` (Apache 2.0).
 
 **Goal:** Deployable hello-world with every engineering practice wired up. No
-features yet — just the chassis.
+features yet — just the chassis. All Tier 0 endpoints are unauthenticated;
+auth wiring lands in Tier 1.
 
 **Scope:**
 
