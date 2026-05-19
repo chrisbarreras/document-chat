@@ -68,6 +68,20 @@
 - Customer-specific connectors
 - Production eval extensions (lifecycle-aware metrics, customer-specific golden sets)
 
+### npm package scopes
+
+Workspace packages publish under deliberate scopes that are **independent of
+the GitHub repo names**, so either repo can be renamed without churning
+import paths.
+
+- Public starter packages: `@document-chat/<name>` — e.g.,
+  `@document-chat/contracts`, `@document-chat/eval`,
+  `@document-chat/retrieval`, `@document-chat/logging`.
+- Private fork packages: `@document-knowledge-graph/<name>` — e.g.,
+  `@document-knowledge-graph/lifecycle`,
+  `@document-knowledge-graph/billing`, `@document-knowledge-graph/kg`.
+- The Next.js app itself (`apps/web`) is unscoped (`web`).
+
 ### Why Apache 2.0 (and not AGPL / BSL)
 
 Apache 2.0 is the default permissive license for portfolio projects that we

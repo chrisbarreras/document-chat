@@ -1,0 +1,25 @@
+/* Minimal reset; Tailwind comes later. */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+}
+
+main {
+  padding: 2rem;
+  max-width: 60rem;
+  margin: 0 auto;
+}
+
+code {
+  background: #f4f4f5;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}

@@ -155,6 +155,13 @@ a superset that adds packages and apps.
 > deliverable (see implementation.md Tier 1 scope). The hello-world chassis
 > in Tier 0 does not require sign-in.
 
+**Package scopes.** Public-repo workspace packages publish under
+`@document-chat/<name>` (e.g., `@document-chat/contracts`,
+`@document-chat/eval`). The private fork uses
+`@document-knowledge-graph/<name>`. `apps/web` is unscoped. Scopes are
+independent of GitHub repo names — either repo can be renamed without
+churning import paths. See [goals.md](./goals.md#npm-package-scopes).
+
 ### Public starter — `knowledge-graph-starter` (Apache 2.0)
 
 ```

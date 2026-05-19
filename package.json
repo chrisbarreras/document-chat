@@ -1,0 +1,25 @@
+{
+  "name": "document-chat",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Public Apache 2.0 starter for a document Q&A system with citations, lifecycle awareness, and a knowledge-graph layer.",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.18.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "license:check": "node scripts/check-license-headers.mjs",
+    "format": "prettier --write \"**/*.{ts,tsx,mjs,json,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,mjs,json,md,yaml,yml}\""
+  },
+  "devDependencies": {
+    "prettier": "3.5.3",
+    "turbo": "2.5.2"
+  }
+}
