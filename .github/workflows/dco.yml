@@ -1,0 +1,33 @@
+name: dco
+
+on:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check DCO sign-off on every commit
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          missing=0
+          for sha in $(git rev-list "$base..$head"); do
+            if ! git log -1 --format=%B "$sha" | grep -q "^Signed-off-by:"; then
+              echo "::error::Commit $sha is missing Signed-off-by"
+              git log -1 --format='  %h %s' "$sha"
+              missing=$((missing + 1))
+            fi
+          done
+          if [ "$missing" -gt 0 ]; then
+            echo ""
+            echo "$missing commit(s) missing DCO sign-off."
+            echo "Sign with: git commit -s [--amend]"
+            echo "Existing history: git rebase -i <base> and add --signoff to the picks."
+            exit 1
+          fi
+          echo "All commits signed off."
