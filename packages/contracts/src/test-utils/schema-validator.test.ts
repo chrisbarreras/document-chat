@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { describe, it, expect } from 'vitest';
-import { createSchemaValidator } from './schema-validator.js';
+import { createSchemaValidator } from './schema-validator';
 
 describe('createSchemaValidator', () => {
   it('validates a well-formed HealthResponse', async () => {

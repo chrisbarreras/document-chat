@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-export * from './types.js';
+export * from './types';
 
 // Mirrors info.version in openapi.yaml. Update both together when the spec
 // version changes.
