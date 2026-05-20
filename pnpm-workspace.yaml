@@ -3,7 +3,7 @@ packages:
   - 'packages/*'
 
 catalog:
-  next: 15.3.2
+  next: 15.3.9
   react: 19.1.0
   react-dom: 19.1.0
   typescript: 5.8.3
@@ -22,7 +22,7 @@ catalog:
   eslint: 8.57.1
   '@typescript-eslint/eslint-plugin': 7.18.0
   '@typescript-eslint/parser': 7.18.0
-  eslint-config-next: 15.3.2
+  eslint-config-next: 15.3.9
   eslint-plugin-import: 2.31.0
   prettier: 3.5.3
   turbo: 2.5.2
