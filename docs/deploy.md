@@ -49,22 +49,26 @@ extensions; feature schema arrives with Tier 1.
 
 ## Deploy to Vercel (native Git integration)
 
-Deployment uses Vercel's built-in Git integration — no deploy workflow in the
-repo. Push to a branch → preview deployment; merge to `main` → production
-deployment. The build is configured by [`vercel.json`](../vercel.json) at the
-repo root.
+Deployment uses Vercel's built-in Git integration — no deploy workflow and no
+`vercel.json` in the repo. Push to a branch → preview deployment; merge to
+`main` → production deployment.
 
 ### One-time setup
 
 1. **Create the project.** In the Vercel dashboard, *Add New… → Project* and
    import the `document-chat` GitHub repo.
-2. **Root Directory.** Leave it at the repository root (`./`). `vercel.json`
-   already points the build at `apps/web` via
-   `turbo run build --filter=web` and `outputDirectory: apps/web/.next`.
-   _Alternative:_ if you hit Next.js detection issues, set Root Directory to
-   `apps/web` instead and remove `buildCommand`/`outputDirectory` from
-   `vercel.json` (Vercel then auto-detects Next.js).
-3. **Framework preset.** Next.js (auto-detected).
+2. **Root Directory.** Set it to **`apps/web`** (*Settings → Build and
+   Deployment → Root Directory*). This is the key step for this monorepo:
+   Vercel then treats `apps/web` as the project root, finds the Next.js build
+   output at the default `.next`, and installs workspace deps from the repo
+   root automatically.
+   - **Leave Build Command and Output Directory at their defaults (no
+     overrides).** An Output Directory override of `apps/web/.next` is wrong
+     once Root Directory is `apps/web` — Vercel resolves it relative to the
+     root directory and looks for `apps/web/apps/web/.next`, which fails.
+     Default (empty) Output Directory means `.next`, which is correct.
+3. **Framework preset.** Next.js (auto-detected). Vercel also detects
+   Turborepo and wires the build accordingly.
 4. **Environment variables** (*Settings → Environment Variables*). None are
    required for the Tier 0 hello-world. Add these when Tier 1 lands, scoped to
    the right environments (Production / Preview / Development):
