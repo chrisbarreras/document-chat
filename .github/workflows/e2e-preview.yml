@@ -1,0 +1,38 @@
+name: e2e-preview
+
+# Runs the Playwright smoke test against a Vercel preview deployment once it's
+# ready. Dormant until the Vercel GitHub integration is connected (no
+# deployment_status events fire before then) — that's expected.
+on:
+  deployment_status:
+
+jobs:
+  smoke:
+    if: >
+      github.event.deployment_status.state == 'success' &&
+      contains(github.event.deployment_status.environment, 'Preview')
+    runs-on: ubuntu-latest
+    env:
+      E2E_BASE_URL: ${{ github.event.deployment_status.environment_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.1
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm --filter web exec playwright install --with-deps chromium
+
+      - name: E2E against preview (playwright)
+        run: pnpm --filter web run test:e2e
