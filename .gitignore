@@ -32,6 +32,9 @@ playwright/.cache/
 supabase/.branches/
 supabase/.temp/
 
+# Drizzle scratch output (authoritative migrations live in supabase/migrations)
+apps/web/drizzle/
+
 # Logs
 *.log
 npm-debug.log*
