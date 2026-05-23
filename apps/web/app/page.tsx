@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import { headers } from 'next/headers';
+import Link from 'next/link';
 import type { components } from '@document-chat/contracts';
+import { getOptionalUser } from '../lib/auth';
 
 // The frontend consumes the OpenAPI contract: the response is typed by the
 // generated `VersionResponse` schema, so the page breaks at compile time if
@@ -26,12 +28,25 @@ async function getVersion(): Promise<VersionResponse | null> {
 }
 
 export default async function Home() {
-  const version = await getVersion();
+  const [version, user] = await Promise.all([getVersion(), getOptionalUser()]);
 
   return (
     <main>
       <h1>document-chat</h1>
       <p>Public Apache 2.0 starter for a document Q&amp;A system.</p>
+
+      {user ? (
+        <div>
+          <span>Signed in as {user.email}</span>{' '}
+          <form action="/auth/signout" method="post" style={{ display: 'inline' }}>
+            <button type="submit">Sign out</button>
+          </form>
+        </div>
+      ) : (
+        <p>
+          <Link href="/login">Sign in</Link> · <Link href="/signup">Create account</Link>
+        </p>
+      )}
 
       {version ? (
         <dl>
