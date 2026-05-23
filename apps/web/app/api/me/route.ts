@@ -2,7 +2,8 @@
 import { NextResponse } from 'next/server';
 import type { components } from '@document-chat/contracts';
 import { getOptionalUser } from '../../../lib/auth';
-import { unauthorized } from '../../../lib/problem';
+import { getCurrentWorkspace } from '../../../lib/workspace';
+import { problemResponse, unauthorized } from '../../../lib/problem';
 
 type MeResponse = components['schemas']['MeResponse'];
 
@@ -12,9 +13,19 @@ export async function GET(): Promise<NextResponse> {
     return unauthorized('Sign in to access this resource.');
   }
 
-  const createdAt = user.created_at ?? new Date().toISOString();
+  const workspace = await getCurrentWorkspace();
+  if (!workspace) {
+    // The signup trigger provisions a workspace for every user, so this only
+    // happens for accounts created before the trigger existed.
+    return problemResponse({
+      status: 500,
+      code: 'workspace.not_provisioned',
+      title: 'Workspace not provisioned',
+      detail: 'No workspace exists for this user.',
+    });
+  }
+
   const email = user.email ?? '';
-  const localPart = email.split('@')[0] || 'workspace';
   const displayName =
     typeof user.user_metadata?.display_name === 'string'
       ? user.user_metadata.display_name
@@ -26,17 +37,7 @@ export async function GET(): Promise<NextResponse> {
       email,
       ...(displayName ? { display_name: displayName } : {}),
     },
-    // Tier 1 is single-workspace-per-user. Until chunk #3 provisions a real
-    // workspace row, synthesize one from the user (id === user.id keeps it
-    // stable across requests). The contract shape is unchanged when the real
-    // table lands.
-    workspace: {
-      id: user.id,
-      name: `${localPart}'s workspace`,
-      slug: localPart,
-      created_at: createdAt,
-      updated_at: createdAt,
-    },
+    workspace,
     roles: ['member'],
   };
 
