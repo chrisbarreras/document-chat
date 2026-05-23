@@ -206,6 +206,18 @@ importers:
         specifier: 'catalog:'
         version: 3.1.2(@types/node@20.17.30)(tsx@4.19.4)
 
+  packages/retrieval:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 20.17.30
+      typescript:
+        specifier: 'catalog:'
+        version: 5.8.3
+      vitest:
+        specifier: 'catalog:'
+        version: 3.1.2(@types/node@20.17.30)(tsx@4.22.3)
+
 packages:
 
   '@ampproject/remapping@2.3.0':
