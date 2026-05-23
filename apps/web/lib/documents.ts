@@ -12,6 +12,34 @@ export const SIGNED_UPLOAD_URL_TTL_SECONDS = 7200;
 // Recorded on each document; chunks record the model actually used at embed time.
 export const DEFAULT_EMBEDDING_MODEL = 'text-embedding-3-small';
 
+// List sort fields (query param -> column) and the Tier 1 status values.
+export const DOCUMENT_SORT_COLUMNS = {
+  name: 'title',
+  uploaded_at: 'created_at',
+  status: 'status',
+} as const;
+export type DocumentSort = keyof typeof DOCUMENT_SORT_COLUMNS;
+export const DEFAULT_DOCUMENT_SORT: DocumentSort = 'uploaded_at';
+export const DOCUMENT_STATUSES = ['draft', 'current', 'retired'] as const;
+export const DEFAULT_PAGE_LIMIT = 20;
+export const MAX_PAGE_LIMIT = 100;
+
+// Opaque pagination cursor. Backed by an offset (robust with the RLS client and
+// fine at single-workspace scale); clients must treat it as opaque. Can move to
+// keyset later without a contract change.
+export function encodeCursor(offset: number): string {
+  return Buffer.from(JSON.stringify({ o: offset })).toString('base64url');
+}
+export function decodeCursor(cursor: string | null | undefined): number {
+  if (!cursor) return 0;
+  try {
+    const parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+    return typeof parsed.o === 'number' && parsed.o >= 0 ? parsed.o : 0;
+  } catch {
+    return 0;
+  }
+}
+
 type Document = components['schemas']['Document'];
 
 /** A `documents` row as selected from Postgres (snake_case columns). */

@@ -10,12 +10,13 @@ vi.mock('../../../lib/workspace', () => ({ getCurrentWorkspace: vi.fn() }));
 vi.mock('../../../lib/documents-store', () => ({
   findUploadedObject: vi.fn(),
   insertDocument: vi.fn(),
+  listDocuments: vi.fn(),
 }));
 
 import { getOptionalUser } from '../../../lib/auth';
 import { getCurrentWorkspace } from '../../../lib/workspace';
-import { findUploadedObject, insertDocument } from '../../../lib/documents-store';
-import { POST } from './route';
+import { findUploadedObject, insertDocument, listDocuments } from '../../../lib/documents-store';
+import { GET, POST } from './route';
 
 const validator = await createSchemaValidator();
 const UPLOAD_ID = '11111111-1111-1111-1111-111111111111';
@@ -60,8 +61,35 @@ beforeEach(() => {
   vi.mocked(getCurrentWorkspace).mockResolvedValue(workspace);
   vi.mocked(findUploadedObject).mockReset();
   vi.mocked(insertDocument).mockReset();
+  vi.mocked(listDocuments).mockReset();
   vi.mocked(findUploadedObject).mockResolvedValue({ size: 1024, mimetype: 'application/pdf' });
   vi.mocked(insertDocument).mockResolvedValue(row);
+  vi.mocked(listDocuments).mockResolvedValue({ items: [row], nextCursor: null });
+});
+
+describe('GET /documents (list)', () => {
+  it('401 when not signed in', async () => {
+    vi.mocked(getOptionalUser).mockResolvedValue(null);
+    const res = await GET(new Request('http://localhost/api/documents'));
+    expect(res.status).toBe(401);
+  });
+
+  it('400 on an invalid sort field', async () => {
+    const res = await GET(new Request('http://localhost/api/documents?sort=bogus'));
+    expect(res.status).toBe(400);
+  });
+
+  it('200 with a PaginatedDocuments-shaped body', async () => {
+    vi.mocked(listDocuments).mockResolvedValue({ items: [row], nextCursor: 'b2Zmc2V0' });
+    const res = await GET(new Request('http://localhost/api/documents?limit=1'));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const result = validator.validate('PaginatedDocuments', body);
+    expect(result.valid, JSON.stringify(result.errors)).toBe(true);
+    expect(body.items).toHaveLength(1);
+    expect(body.page.limit).toBe(1);
+    expect(body.page.next_cursor).toBe('b2Zmc2V0');
+  });
 });
 
 describe('POST /documents (finalize)', () => {

@@ -62,4 +62,45 @@ describe('documents (integration: RLS isolation)', () => {
     expect(bErr).toBeNull();
     expect(bDocs).toHaveLength(0);
   });
+
+  it('paginates with the same order + range listDocuments uses', async () => {
+    const admin = makeClient(serviceKey);
+    const client = await signedInClient(admin, `p-${crypto.randomUUID()}@example.com`);
+    const { data: ws } = await client.from('workspaces').select('id').single();
+    const { data: u } = await client.auth.getUser();
+
+    for (let i = 0; i < 3; i++) {
+      const { error } = await client.from('documents').insert({
+        workspace_id: ws!.id,
+        title: `Doc ${i}`,
+        size_bytes: 100 + i,
+        content_type: 'application/pdf',
+        storage_object_key: `${ws!.id}/${crypto.randomUUID()}.pdf`,
+        embedding_model: 'text-embedding-3-small',
+        uploaded_by: u.user!.id,
+      });
+      expect(error).toBeNull();
+    }
+
+    // listDocuments fetches range(offset, offset + limit) — one extra row past
+    // the limit to detect a next page. With limit=2 and 3 docs: page 1 returns
+    // 3 (2 shown + 1 sentinel), page 2 returns the last 1.
+    const page1 = await client
+      .from('documents')
+      .select('id')
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(0, 2);
+    expect(page1.error).toBeNull();
+    expect(page1.data).toHaveLength(3);
+
+    const page2 = await client
+      .from('documents')
+      .select('id')
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(2, 4);
+    expect(page2.error).toBeNull();
+    expect(page2.data).toHaveLength(1);
+  });
 });
