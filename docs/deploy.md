@@ -98,6 +98,33 @@ tests against Supabase on every PR (see [testing.md](./testing.md)). Local
 Docker is for interactively debugging integration/E2E tests, not a
 requirement for contributing.
 
+### Moving to a new machine
+
+All work lives on GitHub, so the cleanest path on a new machine is a fresh
+`git clone` (ideally into the WSL2 filesystem, per above) — **not** copying an
+old `node_modules` or moving a disk. Only the repo files and gitignored env
+files (`.env.test`, `.env.local`) are local; everything that makes the project
+*run* is machine state that doesn't transfer:
+
+- **`node_modules`** — pnpm links into a per-user store; copied/moved copies
+  have broken links. Always reinstall.
+- **Toolchain, Docker images/volumes, Playwright browsers, git/`gh`
+  credentials, the WinNAT port exclusion** — all live on the system drive /
+  user profile, not in the repo.
+
+Restart checklist:
+
+1. **Toolchain** — Node 20 → `corepack enable` (pnpm 9.15.0) → Docker Desktop
+   (WSL2 backend) → Supabase CLI → `gh` (see Prerequisites above).
+2. **Dependencies** — from a fresh clone, `pnpm install`. (If you reused an
+   old working copy, delete every `node_modules` first.)
+3. **Re-auth** — git push credential + `gh auth login`.
+4. **Database (when needed)** — `pnpm db:start` → `pnpm db:reset` → regenerate
+   `apps/web/.env.test`.
+5. **Playwright** — `pnpm --filter web exec playwright install chromium`.
+6. **Verify** — `pnpm test` (unit, no Docker), then `pnpm build` +
+   `pnpm --filter web run test:e2e`; integration only if Docker is comfortable.
+
 ## Deploy to Vercel (native Git integration)
 
 Deployment uses Vercel's built-in Git integration — no deploy workflow and no
