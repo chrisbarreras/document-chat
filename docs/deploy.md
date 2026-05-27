@@ -10,7 +10,10 @@ delivery plan see [../implementation.md](../implementation.md).
 
 - **Node 20 LTS** (see `.nvmrc`). `nvm use` if you use nvm.
 - **pnpm 9** — `corepack enable pnpm` (ships with Node), or install per
-  <https://pnpm.io/installation>.
+  <https://pnpm.io/installation>. On Windows, `corepack enable pnpm` can fail
+  if Node is under `C:\Program Files` (no write permission for the shim); use
+  a user-space Node (nvm/fnm or WSL), or
+  `corepack enable --install-directory <a-dir-on-PATH> pnpm`.
 - **Docker** — only needed once you run Supabase locally (Tier 1+).
 - **Supabase CLI** — only needed for the database. Install per
   <https://supabase.com/docs/guides/cli> (`scoop install supabase` on
@@ -46,6 +49,54 @@ database commands:
 Migrations live in [`supabase/migrations/`](../supabase/migrations/). The
 Tier 0 baseline migration only enables the `vector` and `pgcrypto`
 extensions; feature schema arrives with Tier 1.
+
+### Local environment on Windows (WSL2)
+
+The full local stack is ~9 Docker containers (Postgres, Auth, Storage, REST,
+Realtime, Studio, etc.) plus the Next dev server. On an under-resourced
+Windows box this can saturate memory and disk and freeze the host. Guidance
+for running it comfortably:
+
+**Hardware.** RAM is the one that matters — the freeze mode is memory
+pressure and swapping, not CPU. Aim for **32 GB RAM**, an **NVMe** system
+drive, and 8+ cores. 16 GB is a painful minimum. WSL2 and Docker data live on
+`C:` by default; keep them on the NVMe (don't relocate to a slow/external
+drive).
+
+**Develop inside WSL2** (biggest single win). Clone the repo into the WSL2
+filesystem (e.g. `~/projects/document-chat`), **not** `/mnt/c/...` or
+`/mnt/d/...` — Docker bind-mounts and Node file-watching are dramatically
+faster on the native ext4 filesystem. Install the Linux builds of the
+toolchain inside WSL.
+
+**Cap WSL2 memory** so Docker can never freeze Windows. Create
+`%USERPROFILE%\.wslconfig` (this file is machine-global and is *not* part of
+the repo):
+
+```ini
+[wsl2]
+memory=12GB
+processors=8
+swap=4GB
+```
+
+Then apply it: `wsl --shutdown`, and restart Docker Desktop. Worth doing even
+with 32 GB — it bounds Docker so the host stays responsive.
+
+**New-machine toolchain checklist:**
+
+- **Node 20 LTS** (matches `.nvmrc`) — install via a user-space manager
+  (nvm/fnm) or inside WSL so `corepack enable` can write the pnpm shim
+  without admin.
+- `corepack enable` → **pnpm 9.15.0** (honors the pinned `packageManager`).
+- **Docker Desktop** (WSL2 backend) or Docker Engine inside WSL.
+- **Supabase CLI** and **`gh`**.
+
+**You don't need local Docker to be productive.** Unit and contract tests run
+without it (`pnpm test`), and the CI `integration` job runs the DB-backed
+tests against Supabase on every PR (see [testing.md](./testing.md)). Local
+Docker is for interactively debugging integration/E2E tests, not a
+requirement for contributing.
 
 ## Deploy to Vercel (native Git integration)
 
