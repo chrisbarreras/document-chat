@@ -107,6 +107,9 @@ importers:
       '@document-chat/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@document-chat/retrieval':
+        specifier: workspace:*
+        version: link:../../packages/retrieval
       '@supabase/ssr':
         specifier: 'catalog:'
         version: 0.10.3(@supabase/supabase-js@2.106.0)

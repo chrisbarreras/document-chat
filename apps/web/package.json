@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@document-chat/contracts": "workspace:*",
+    "@document-chat/retrieval": "workspace:*",
     "@supabase/ssr": "catalog:",
     "@supabase/supabase-js": "catalog:",
     "drizzle-orm": "catalog:",
