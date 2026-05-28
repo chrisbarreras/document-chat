@@ -12,10 +12,12 @@ vi.mock('../../../lib/documents-store', () => ({
   insertDocument: vi.fn(),
   listDocuments: vi.fn(),
 }));
+vi.mock('../../../lib/inngest/client', () => ({ sendDocumentUploaded: vi.fn() }));
 
 import { getOptionalUser } from '../../../lib/auth';
 import { getCurrentWorkspace } from '../../../lib/workspace';
 import { findUploadedObject, insertDocument, listDocuments } from '../../../lib/documents-store';
+import { sendDocumentUploaded } from '../../../lib/inngest/client';
 import { GET, POST } from './route';
 
 const validator = await createSchemaValidator();
@@ -65,6 +67,8 @@ beforeEach(() => {
   vi.mocked(findUploadedObject).mockResolvedValue({ size: 1024, mimetype: 'application/pdf' });
   vi.mocked(insertDocument).mockResolvedValue(row);
   vi.mocked(listDocuments).mockResolvedValue({ items: [row], nextCursor: null });
+  vi.mocked(sendDocumentUploaded).mockReset();
+  vi.mocked(sendDocumentUploaded).mockResolvedValue(undefined);
 });
 
 describe('GET /documents (list)', () => {
@@ -114,5 +118,20 @@ describe('POST /documents (finalize)', () => {
     expect(result.valid, JSON.stringify(result.errors)).toBe(true);
     expect(body.ingestion_state).toBe('pending');
     expect(body.uploaded_by.user_id).toBe(user.id);
+  });
+
+  it('emits a document.uploaded event on success', async () => {
+    await POST(req({ upload_id: UPLOAD_ID, title: 'Quarterly report' }));
+    expect(sendDocumentUploaded).toHaveBeenCalledWith({
+      document_id: row.id,
+      workspace_id: row.workspace_id,
+      storage_object_key: row.storage_object_key,
+    });
+  });
+
+  it('still returns 201 if the inngest send fails', async () => {
+    vi.mocked(sendDocumentUploaded).mockRejectedValueOnce(new Error('inngest down'));
+    const res = await POST(req({ upload_id: UPLOAD_ID, title: 'Quarterly report' }));
+    expect(res.status).toBe(201);
   });
 });

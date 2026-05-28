@@ -4,6 +4,7 @@ import type { components } from '@document-chat/contracts';
 import { getOptionalUser } from '../../../lib/auth';
 import { getCurrentWorkspace } from '../../../lib/workspace';
 import { findUploadedObject, insertDocument, listDocuments } from '../../../lib/documents-store';
+import { sendDocumentUploaded } from '../../../lib/inngest/client';
 import { problemResponse, unauthorized } from '../../../lib/problem';
 import {
   ALLOWED_CONTENT_TYPES,
@@ -168,6 +169,19 @@ export async function POST(request: Request): Promise<NextResponse> {
       code: 'document.create_failed',
       title: 'Could not create document',
     });
+  }
+
+  // Kick off async extraction → chunking → embedding. We persist the row
+  // before sending so the worker always has a target to update; a failed
+  // send leaves the row in `pending` and reprocess can recover it (chunk #17).
+  try {
+    await sendDocumentUploaded({
+      document_id: row.id,
+      workspace_id: row.workspace_id,
+      storage_object_key: row.storage_object_key,
+    });
+  } catch (err) {
+    console.error('inngest send failed for document', row.id, err);
   }
 
   const document = toContractDocument(row, {

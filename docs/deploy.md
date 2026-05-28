@@ -43,6 +43,21 @@ database commands:
 - `pnpm db:stop` — stop the local stack.
 - `pnpm dev:all` — `supabase start` followed by `pnpm dev`.
 
+### Run with background jobs (Tier 1+ ingestion)
+
+Document ingestion runs as Inngest functions registered at
+`/api/inngest`. Locally the Inngest CLI's dev server discovers them over
+HTTP. In a third terminal, after `pnpm dev` is up:
+
+```bash
+pnpm dev:inngest      # npx inngest-cli dev -u http://localhost:3000/api/inngest
+```
+
+Open <http://localhost:8288> for the Inngest dev UI (function list, run
+history, replays). The dev server is unauthenticated, so `INNGEST_EVENT_KEY`
+and `INNGEST_SIGNING_KEY` can be left blank in `.env.local`. In production,
+set both on Vercel from the Inngest Cloud dashboard.
+
 Migrations live in [`supabase/migrations/`](../supabase/migrations/). The
 Tier 0 baseline migration only enables the `vector` and `pgcrypto`
 extensions; feature schema arrives with Tier 1.
@@ -78,6 +93,8 @@ Deployment uses Vercel's built-in Git integration — no deploy workflow and no
    | `NEXT_PUBLIC_SUPABASE_URL` | all | From the Supabase project (or a Vercel-managed integration). |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | all | Public anon key. |
    | `SUPABASE_SERVICE_ROLE_KEY` | Production, Preview | Server-only secret — never `NEXT_PUBLIC_`. |
+   | `INNGEST_EVENT_KEY` | Production, Preview | From the Inngest Cloud dashboard (Tier 1 ingestion). |
+   | `INNGEST_SIGNING_KEY` | Production, Preview | From the Inngest Cloud dashboard (Tier 1 ingestion). |
 
    `VERCEL_ENV` and `VERCEL_GIT_COMMIT_SHA` are injected by Vercel
    automatically, so `/api/version` reports the environment and git SHA with
