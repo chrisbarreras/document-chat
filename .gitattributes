@@ -1,0 +1,13 @@
+# Default: let Git auto-detect text vs binary.
+* text=auto
+
+# Lock binaries so the autocrlf=true defaults on Windows can never corrupt
+# them. Add file types here as new binary fixtures land.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
