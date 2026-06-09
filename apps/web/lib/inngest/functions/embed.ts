@@ -4,8 +4,7 @@
 // the documents row through `chunking -> embedding -> ready` (or `failed`).
 // No SDK imports so unit tests can exercise the state machine without a real
 // embeddings client or Supabase.
-import type { TextChunk } from '@document-chat/retrieval';
-import { EMBEDDING_MODEL } from '../../embeddings/openai';
+import { EMBEDDING_MODEL, type TextChunk } from '@document-chat/retrieval';
 import type { NewChunkRow } from '../storage';
 
 /**

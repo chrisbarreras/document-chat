@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { describe, it, expect, vi } from 'vitest';
-import { embedTexts, EMBEDDING_DIMENSIONS } from './openai';
+import { embedQuery, embedTexts, EMBEDDING_DIMENSIONS } from './openai';
 
 function makeVector(seed: number): number[] {
   return Array.from({ length: EMBEDDING_DIMENSIONS }, (_, i) => seed + i / 10000);
@@ -86,5 +86,17 @@ describe('embedTexts', () => {
     } finally {
       if (prev !== undefined) process.env.OPENAI_API_KEY = prev;
     }
+  });
+});
+
+describe('embedQuery', () => {
+  it('returns the single vector for a one-input batch', async () => {
+    const fetchImpl = vi.fn(async () => okResponse(0, 1));
+    const vector = await embedQuery('a query', {
+      fetch: fetchImpl as unknown as typeof fetch,
+      apiKey: 'k',
+    });
+    expect(vector).toHaveLength(EMBEDDING_DIMENSIONS);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 });

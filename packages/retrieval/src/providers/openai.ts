@@ -4,6 +4,10 @@
 // implementation so unit tests can exercise batching + retry without network
 // access. Defaults to the global `fetch` injected by Node 20 / the Next.js
 // runtime.
+//
+// Lives in `packages/retrieval` so that ingestion (embed at write time) and
+// retrieval (embed a query at read time) share one client. See
+// docs/adr/0006-embeddings-and-retrieval.md.
 
 /** Public-facing identifier of the embedding model locked through Tier 3. */
 export const EMBEDDING_MODEL = 'text-embedding-3-small';
@@ -40,7 +44,8 @@ interface OpenAIErrorBody {
 /**
  * Embed `inputs` with `text-embedding-3-small` in batches. Returns one
  * 1536-dim vector per input, in input order. Throws on the first failed
- * batch — the Inngest step that wraps this call decides whether to retry.
+ * batch — the caller (an Inngest step at ingestion time, a route handler at
+ * query time) decides whether to retry.
  *
  * Empty inputs short-circuit to an empty result (no network call); callers
  * higher up should never embed an empty chunk, but defending here keeps the
@@ -90,4 +95,17 @@ export async function embedTexts(
   }
 
   return out;
+}
+
+/**
+ * Embed a single string and return its vector. Convenience wrapper for the
+ * common "embed one query" path; routes the call through `embedTexts` so
+ * batching/error semantics stay identical.
+ */
+export async function embedQuery(input: string, options: EmbedOptions = {}): Promise<number[]> {
+  const [vector] = await embedTexts([input], options);
+  if (!vector) {
+    throw new Error('embedQuery: no vector returned');
+  }
+  return vector;
 }

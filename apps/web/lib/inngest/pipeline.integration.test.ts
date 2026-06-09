@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
-import { EMBEDDING_DIMENSIONS } from '../embeddings/openai';
+import { EMBEDDING_DIMENSIONS } from '@document-chat/retrieval';
 import { runChunking } from './functions/chunk';
 import { runEmbedding } from './functions/embed';
 import { extractPdfPages, runExtraction } from './functions/extract';

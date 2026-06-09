@@ -3,14 +3,17 @@
 // tests can import it without mocking) — storage/DB access lives in
 // documents-store.ts.
 import type { components } from '@document-chat/contracts';
+import { EMBEDDING_MODEL } from '@document-chat/retrieval';
 
 export const DOCUMENTS_BUCKET = 'documents';
 export const MAX_UPLOAD_BYTES = 52_428_800; // 50 MB (REQ-1.1.1)
 export const ALLOWED_CONTENT_TYPES = ['application/pdf'] as const;
 // Supabase signed upload URLs are valid for ~2 hours; we report it, not set it.
 export const SIGNED_UPLOAD_URL_TTL_SECONDS = 7200;
-// Recorded on each document; chunks record the model actually used at embed time.
-export const DEFAULT_EMBEDDING_MODEL = 'text-embedding-3-small';
+// Recorded on each document at insert time; the chunks step persists the
+// model actually used to embed each row (re-exported from the retrieval
+// package, which owns the lock — see ADR-0006).
+export const DEFAULT_EMBEDDING_MODEL = EMBEDDING_MODEL;
 
 // List sort fields (query param -> column) and the Tier 1 status values.
 export const DOCUMENT_SORT_COLUMNS = {

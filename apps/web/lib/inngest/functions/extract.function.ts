@@ -11,7 +11,7 @@
 // keeps the size of every event payload tiny (`document.uploaded` only); the
 // large intermediate values (per-page text, chunk records) live inside the
 // step memo, not in events.
-import { embedTexts } from '../../embeddings/openai';
+import { embedTexts } from '@document-chat/retrieval';
 import { inngest, EVENT_DOCUMENT_UPLOADED, type DocumentUploadedData } from '../client';
 import { downloadDocumentObject, patchDocumentRow, replaceDocumentChunks } from '../storage';
 import { runChunking } from './chunk';
