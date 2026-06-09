@@ -8,6 +8,12 @@
 -- chunks/documents the user can't see are filtered by the existing
 -- `chunks_rw_own` / `documents_rw_own` policies before the kNN runs.
 --
+-- The function runs with `search_path = ''` (Supabase hardening guidance:
+-- avoid surprise resolutions). That means we must reference pgvector's
+-- cosine-distance operator by its fully-qualified form via the OPERATOR
+-- syntax: `OPERATOR(extensions.<=>)`. A bare `<=>` or `extensions.<=>` in
+-- expression position is a syntax error in PostgreSQL.
+--
 -- The HNSW index on chunks(embedding) (created in the documents_chunks
 -- migration) is used automatically when ORDER BY uses the cosine `<=>`
 -- operator.
@@ -53,7 +59,7 @@ as $$
     c.char_end,
     c.section_path,
     -- Cosine similarity = 1 - cosine distance. Bounded [0, 2]; higher = closer.
-    (1 - (c.embedding extensions.<=> p_query_embedding))::double precision as score,
+    (1 - (c.embedding OPERATOR(extensions.<=>) p_query_embedding))::double precision as score,
     c.created_at,
     c.updated_at
   from public.chunks c
@@ -61,7 +67,7 @@ as $$
   where d.workspace_id = p_workspace_id
     and d.status <> 'retired'
     and c.embedding is not null
-  order by c.embedding extensions.<=> p_query_embedding
+  order by c.embedding OPERATOR(extensions.<=>) p_query_embedding
   limit greatest(1, least(p_top_k, 50));
 $$;
 
