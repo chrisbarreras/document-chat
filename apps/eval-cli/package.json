@@ -1,0 +1,22 @@
+{
+  "name": "eval-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "echo 'no lint configured' && exit 0",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'no unit tests; covered by @document-chat/eval' && exit 0",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@document-chat/eval": "workspace:*",
+    "@document-chat/retrieval": "workspace:*",
+    "@supabase/supabase-js": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  }
+}

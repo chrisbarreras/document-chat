@@ -102,6 +102,28 @@ importers:
         specifier: 2.5.2
         version: 2.5.2
 
+  apps/eval-cli:
+    dependencies:
+      '@document-chat/eval':
+        specifier: workspace:*
+        version: link:../../packages/eval
+      '@document-chat/retrieval':
+        specifier: workspace:*
+        version: link:../../packages/retrieval
+      '@supabase/supabase-js':
+        specifier: 'catalog:'
+        version: 2.106.0
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 20.17.30
+      tsx:
+        specifier: 'catalog:'
+        version: 4.19.4
+      typescript:
+        specifier: 'catalog:'
+        version: 5.8.3
+
   apps/web:
     dependencies:
       '@document-chat/contracts':
@@ -214,6 +236,18 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 3.1.2(@types/debug@4.1.13)(@types/node@20.17.30)(tsx@4.19.4)(yaml@2.9.0)
+
+  packages/eval:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 20.17.30
+      typescript:
+        specifier: 'catalog:'
+        version: 5.8.3
+      vitest:
+        specifier: 'catalog:'
+        version: 3.1.2(@types/debug@4.1.13)(@types/node@20.17.30)(tsx@4.22.3)(yaml@2.9.0)
 
   packages/retrieval:
     devDependencies:
@@ -5341,11 +5375,11 @@ snapshots:
 
   '@types/bunyan@1.8.11':
     dependencies:
-      '@types/node': 20.17.30
+      '@types/node': 22.19.19
 
   '@types/connect@3.4.38':
     dependencies:
-      '@types/node': 20.17.30
+      '@types/node': 22.19.19
 
   '@types/debug@4.1.13':
     dependencies:
@@ -5363,13 +5397,13 @@ snapshots:
 
   '@types/memcached@2.2.10':
     dependencies:
-      '@types/node': 20.17.30
+      '@types/node': 22.19.19
 
   '@types/ms@2.1.0': {}
 
   '@types/mysql@2.15.27':
     dependencies:
-      '@types/node': 20.17.30
+      '@types/node': 22.19.19
 
   '@types/node@20.17.30':
     dependencies:
@@ -5381,7 +5415,7 @@ snapshots:
 
   '@types/oracledb@6.5.2':
     dependencies:
-      '@types/node': 20.17.30
+      '@types/node': 22.19.19
 
   '@types/pg-pool@2.0.7':
     dependencies:
@@ -5389,7 +5423,7 @@ snapshots:
 
   '@types/pg@8.15.6':
     dependencies:
-      '@types/node': 20.17.30
+      '@types/node': 22.19.19
       pg-protocol: 1.14.0
       pg-types: 2.2.0
 
@@ -5403,7 +5437,7 @@ snapshots:
 
   '@types/tedious@4.0.14':
     dependencies:
-      '@types/node': 20.17.30
+      '@types/node': 22.19.19
 
   '@types/ws@8.18.1':
     dependencies:
@@ -7161,7 +7195,7 @@ snapshots:
       '@protobufjs/path': 1.1.2
       '@protobufjs/pool': 1.1.0
       '@protobufjs/utf8': 1.1.1
-      '@types/node': 20.17.30
+      '@types/node': 22.19.19
       long: 5.3.2
 
   punycode@2.3.1: {}

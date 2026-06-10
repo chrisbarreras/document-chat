@@ -1,0 +1,104 @@
+name: eval
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # 03:17 UTC daily — off the top of the hour to avoid GitHub's cron
+    # contention windows.
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: eval-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # PR-time + push-to-main: deterministic, mocked-LLM run. Required check.
+  # Exercises the golden set against canned transcripts so regressions in
+  # the runner / metrics / golden file surface here.
+  eval-mock:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.1
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Eval (mock)
+        run: pnpm --filter eval-cli run start -- --mock --json-out eval-mock.json
+
+      - name: Upload summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-mock-summary
+          path: eval-mock.json
+          if-no-files-found: ignore
+
+  # Nightly real-LLM run. Hits the deployed preview, exercises real
+  # OpenAI embeddings + real Anthropic chat. Bounded to a single hour
+  # of walltime; a hang anywhere short-circuits the job.
+  eval-live:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 60
+    env:
+      EVAL_API_BASE_URL: ${{ secrets.EVAL_API_BASE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.EVAL_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.EVAL_SUPABASE_SERVICE_ROLE_KEY }}
+      EVAL_WORKSPACE_ID: ${{ secrets.EVAL_WORKSPACE_ID }}
+      EVAL_DOCUMENT_MAP: ${{ github.workspace }}/eval-document-map.json
+      OPENAI_API_KEY: ${{ secrets.EVAL_OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.EVAL_ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.1
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Fetch document map
+        # The seeder workflow uploads `eval-document-map.json` as a release
+        # artifact tagged `eval-fixtures`. Re-fetching it here keeps the
+        # eval workflow decoupled from the seeder's run cadence.
+        run: |
+          curl -fsSL \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/octet-stream" \
+            -o "$EVAL_DOCUMENT_MAP" \
+            "${{ secrets.EVAL_DOCUMENT_MAP_URL }}"
+
+      - name: Eval (live)
+        run: pnpm --filter eval-cli run start -- --json-out eval-live.json
+
+      - name: Upload summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-live-summary
+          path: eval-live.json
+          if-no-files-found: ignore

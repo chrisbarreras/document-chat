@@ -1,0 +1,31 @@
+{
+  "documents": [
+    {
+      "id": "doc-quokka-handbook",
+      "title": "Quokka Handbook",
+      "chunkSlugs": ["quokka-overview", "quokka-conservation"],
+      "pages": [
+        "The quokka (Setonix brachyurus) is a small marsupial native to Western Australia. Adults weigh between 2.5 and 5 kilograms and stand roughly 40 to 54 centimetres tall at the shoulder. Quokkas are members of the macropod family, which also includes kangaroos and wallabies. They are herbivores whose diet consists primarily of grasses, leaves, succulents, and bark. They obtain most of their water from the plants they eat and can survive long periods without drinking. Quokkas are nocturnal, foraging at night and sheltering in dense vegetation during the day.",
+        "The species' largest population lives on Rottnest Island, off the coast near Perth. Smaller mainland populations persist in protected forest reserves. Quokkas require dense undergrowth for shelter from predators such as foxes and feral cats. The IUCN lists the quokka as vulnerable. Habitat loss from clearing and bushfire, along with introduced predators, are the main threats to the population. Recovery programmes focus on fox baiting, fire-management plans, and translocations to predator-free reserves."
+      ]
+    },
+    {
+      "id": "doc-coffee-brewing",
+      "title": "Coffee Brewing Guide",
+      "chunkSlugs": ["coffee-ratio-and-grind", "coffee-pour-over-and-storage"],
+      "pages": [
+        "A good cup of coffee starts with the right ratio of water to ground coffee. The Specialty Coffee Association recommends 55 grams of coffee per litre of water, give or take five grams depending on taste. Weighing both beans and water on a scale produces more consistent results than measuring by volume. Grind size matters as much as ratio. Espresso machines need a fine grind that resembles powdered sugar. Pour-over brewers prefer a medium grind, similar to coarse sand. A French press calls for a coarse grind, closer to breadcrumbs. Grinding immediately before brewing preserves the aromatic oils that evaporate within minutes of milling.",
+        "Pour-over brewing extracts flavour slowly with hot water poured by hand through a paper or metal filter. Begin with a thirty-second bloom: wet all the grounds with twice their weight in water and wait while carbon dioxide escapes. Continue pouring in steady circles, keeping the water level constant, until the total brew weight is reached. A four-minute total brew time is a reasonable starting point. Store whole beans in an airtight container away from light, heat, and moisture. Freezing beans in single-use portions extends freshness for weeks; never refreeze a portion once it has been thawed."
+      ]
+    },
+    {
+      "id": "doc-rope-knots",
+      "title": "Sailor's Knot Manual",
+      "chunkSlugs": ["knots-bowline-and-clove", "knots-figure-eight-and-safety"],
+      "pages": [
+        "The bowline forms a fixed loop at the end of a rope that does not slip under load and unties cleanly after release. To tie one, form a small loop in the standing part, then pass the working end up through the loop, around the standing part, and back down through the loop. Sailors describe it as the rabbit coming out of the hole, going around the tree, and back down the hole. The clove hitch secures a rope to a post or rail. Loop the rope around the post once, then loop a second time so the working end passes under the standing part. The hitch holds firmly under steady load but can roll out under shifting loads, so add a half hitch for a temporary mooring.",
+        "The figure-eight knot is a stopper knot used to prevent a line from running through a block or fairlead. It is bulkier than an overhand knot and easier to untie after loading. Climbers tie the figure-eight on a bight to attach a rope to a harness. Every knot loses strength relative to the un-knotted rope. The figure-eight retains roughly seventy-five percent; the bowline retains about seventy percent. Inspect knots before loading, dress them so the strands lie flat, and replace ropes that show abrasion, glazing, or core damage."
+      ]
+    }
+  ]
+}

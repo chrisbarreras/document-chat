@@ -1,0 +1,20 @@
+{"id":"q-quokka-01","documentId":"doc-quokka-handbook","question":"What family of mammals does the quokka belong to?","expectedChunkIds":["quokka-overview"],"answerContains":["macropod"]}
+{"id":"q-quokka-02","documentId":"doc-quokka-handbook","question":"How much does an adult quokka weigh?","expectedChunkIds":["quokka-overview"],"answerContains":["2.5","5","kilogram"]}
+{"id":"q-quokka-03","documentId":"doc-quokka-handbook","question":"When are quokkas most active?","expectedChunkIds":["quokka-overview"],"answerContains":["nocturnal"]}
+{"id":"q-quokka-04","documentId":"doc-quokka-handbook","question":"Where does the largest quokka population live?","expectedChunkIds":["quokka-conservation"],"answerContains":["Rottnest"]}
+{"id":"q-quokka-05","documentId":"doc-quokka-handbook","question":"What is the quokka's IUCN conservation status?","expectedChunkIds":["quokka-conservation"],"answerContains":["vulnerable"]}
+{"id":"q-quokka-06","documentId":"doc-quokka-handbook","question":"Which introduced predators threaten quokkas?","expectedChunkIds":["quokka-conservation"],"answerContains":["fox","cat"]}
+{"id":"q-quokka-07","documentId":"doc-quokka-handbook","question":"What does a quokka eat?","expectedChunkIds":["quokka-overview"],"answerContains":["grass","leaves"]}
+{"id":"q-coffee-01","documentId":"doc-coffee-brewing","question":"How many grams of coffee per litre of water does the SCA recommend?","expectedChunkIds":["coffee-ratio-and-grind"],"answerContains":["55","gram"]}
+{"id":"q-coffee-02","documentId":"doc-coffee-brewing","question":"What grind size does an espresso machine need?","expectedChunkIds":["coffee-ratio-and-grind"],"answerContains":["fine"]}
+{"id":"q-coffee-03","documentId":"doc-coffee-brewing","question":"What grind size suits a French press?","expectedChunkIds":["coffee-ratio-and-grind"],"answerContains":["coarse"]}
+{"id":"q-coffee-04","documentId":"doc-coffee-brewing","question":"How long should the bloom phase of a pour-over last?","expectedChunkIds":["coffee-pour-over-and-storage"],"answerContains":["thirty","second"]}
+{"id":"q-coffee-05","documentId":"doc-coffee-brewing","question":"What is a reasonable total brew time for pour-over coffee?","expectedChunkIds":["coffee-pour-over-and-storage"],"answerContains":["four","minute"]}
+{"id":"q-coffee-06","documentId":"doc-coffee-brewing","question":"How should whole coffee beans be stored?","expectedChunkIds":["coffee-pour-over-and-storage"],"answerContains":["airtight"]}
+{"id":"q-coffee-07","documentId":"doc-coffee-brewing","question":"Why grind coffee right before brewing?","expectedChunkIds":["coffee-ratio-and-grind"],"answerContains":["aromatic","oil"]}
+{"id":"q-knots-01","documentId":"doc-rope-knots","question":"What does a bowline knot create?","expectedChunkIds":["knots-bowline-and-clove"],"answerContains":["fixed","loop"]}
+{"id":"q-knots-02","documentId":"doc-rope-knots","question":"What knot secures a rope to a post or rail?","expectedChunkIds":["knots-bowline-and-clove"],"answerContains":["clove","hitch"]}
+{"id":"q-knots-03","documentId":"doc-rope-knots","question":"What kind of knot is the figure-eight?","expectedChunkIds":["knots-figure-eight-and-safety"],"answerContains":["stopper"]}
+{"id":"q-knots-04","documentId":"doc-rope-knots","question":"What percentage of rope strength does the figure-eight retain?","expectedChunkIds":["knots-figure-eight-and-safety"],"answerContains":["seventy-five"]}
+{"id":"q-knots-05","documentId":"doc-rope-knots","question":"What percentage of rope strength does the bowline retain?","expectedChunkIds":["knots-figure-eight-and-safety"],"answerContains":["seventy"]}
+{"id":"q-knots-06","documentId":"doc-rope-knots","question":"What signs indicate a rope should be replaced?","expectedChunkIds":["knots-figure-eight-and-safety"],"answerContains":["abrasion"]}
