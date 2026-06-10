@@ -42,7 +42,7 @@ export default async function Home() {
             <button type="submit">Sign out</button>
           </form>
           <p>
-            <Link href="/documents">Documents</Link>
+            <Link href="/documents">Documents</Link> · <Link href="/chats">Chats</Link>
           </p>
         </div>
       ) : (

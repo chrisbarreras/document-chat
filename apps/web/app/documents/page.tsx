@@ -64,7 +64,7 @@ export default async function DocumentsPage({
       ) : null}
 
       <p>
-        <Link href="/">Home</Link>
+        <Link href="/chats">Chats</Link> · <Link href="/">Home</Link>
       </p>
     </main>
   );

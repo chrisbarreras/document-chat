@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 const AUTH_PAGES = new Set(['/login', '/signup']);
 // Page routes that require a session. API routes aren't listed — they return
 // 401 from their handlers rather than redirecting.
-const PROTECTED_PREFIXES = ['/documents'];
+const PROTECTED_PREFIXES = ['/documents', '/chats'];
 
 function isProtected(pathname: string): boolean {
   return PROTECTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
