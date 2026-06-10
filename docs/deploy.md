@@ -62,6 +62,18 @@ Migrations live in [`supabase/migrations/`](../supabase/migrations/). The
 Tier 0 baseline migration only enables the `vector` and `pgcrypto`
 extensions; feature schema arrives with Tier 1.
 
+### Try the Tier 1 demo end-to-end
+
+After `pnpm dev:all` + `pnpm dev:inngest`:
+
+1. Sign up at <http://localhost:3000/auth/sign-up>.
+2. Open <http://localhost:3000/documents> and upload a small PDF.
+3. Click the document to watch ingestion progress stream (extracting →
+   chunking → embedding → ready) via the SSE panel.
+4. Open <http://localhost:3000/chats>, start a new chat scoped to that
+   document, and ask a question. Tokens stream in; citation chips appear
+   as the answer references retrieved chunks.
+
 ## Deploy to Vercel (native Git integration)
 
 Deployment uses Vercel's built-in Git integration — no deploy workflow and no
@@ -84,28 +96,83 @@ Deployment uses Vercel's built-in Git integration — no deploy workflow and no
      Default (empty) Output Directory means `.next`, which is correct.
 3. **Framework preset.** Next.js (auto-detected). Vercel also detects
    Turborepo and wires the build accordingly.
-4. **Environment variables** (*Settings → Environment Variables*). None are
-   required for the Tier 0 hello-world. Add these when Tier 1 lands, scoped to
-   the right environments (Production / Preview / Development):
-
-   | Variable | Scope | Notes |
-   |---|---|---|
-   | `NEXT_PUBLIC_SUPABASE_URL` | all | From the Supabase project (or a Vercel-managed integration). |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | all | Public anon key. |
-   | `SUPABASE_SERVICE_ROLE_KEY` | Production, Preview | Server-only secret — never `NEXT_PUBLIC_`. |
-   | `INNGEST_EVENT_KEY` | Production, Preview | From the Inngest Cloud dashboard (Tier 1 ingestion). |
-   | `INNGEST_SIGNING_KEY` | Production, Preview | From the Inngest Cloud dashboard (Tier 1 ingestion). |
-
-   `VERCEL_ENV` and `VERCEL_GIT_COMMIT_SHA` are injected by Vercel
-   automatically, so `/api/version` reports the environment and git SHA with
-   no configuration (see [`apps/web/lib/build-info.ts`](../apps/web/lib/build-info.ts)).
+4. **Environment variables** (*Settings → Environment Variables*) — see the
+   matrix below.
 5. **Enable preview deployments** for pull requests (on by default).
 
-### Verify a deployment
+### Production environment matrix
 
-After the first deploy, hit `/api/health` and `/api/version` on the deployment
-URL. `/api/version` should report `environment: "prod"` on production and
-`"preview"` on PR previews.
+| Variable | Scope | Source | Notes |
+|---|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Prod, Preview, Dev | Supabase dashboard → Settings → API | Browser-visible; safe to expose. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Prod, Preview, Dev | Supabase dashboard → Settings → API | Browser-visible; safe to expose. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Prod, Preview | Supabase dashboard → Settings → API | **Server-only secret.** Never prefix with `NEXT_PUBLIC_`. |
+| `INNGEST_EVENT_KEY` | Prod, Preview | Inngest Cloud → Manage → Event Keys | Used by the `/api/inngest` send call. |
+| `INNGEST_SIGNING_KEY` | Prod, Preview | Inngest Cloud → Manage → Signing Keys | Used by the SDK to authenticate webhook deliveries. |
+| `OPENAI_API_KEY` | Prod, Preview | <https://platform.openai.com/api-keys> | Embeddings for ingestion + retrieval. |
+| `ANTHROPIC_API_KEY` | Prod, Preview | <https://console.anthropic.com/> | Chat completion. |
+
+Per-environment guidance:
+
+- **Production** uses the dedicated prod Supabase project + prod Inngest
+  environment + your prod-scoped API keys (low monthly cap recommended).
+- **Preview** can share the prod project for ergonomics, but the safer
+  default is a separate `dev` Supabase project so a destructive migration
+  on a PR can't touch production data. Match Inngest's `dev` environment to
+  the same project.
+- **Development (local)** uses `pnpm db:start` for Supabase and the Inngest
+  CLI dev server (no `INNGEST_*` keys needed). Generate a low-cap key pair
+  on OpenAI + Anthropic for your `.env.local`.
+
+`VERCEL_ENV` and `VERCEL_GIT_COMMIT_SHA` are injected by Vercel
+automatically, so `/api/version` reports the environment and git SHA with
+no configuration (see [`apps/web/lib/build-info.ts`](../apps/web/lib/build-info.ts)).
+
+### Inngest Cloud connection
+
+The `/api/inngest` route is the SDK's serve handler — it auto-registers
+the functions defined under [`apps/web/lib/inngest/functions/`](../apps/web/lib/inngest/functions/).
+In Inngest Cloud:
+
+1. Create an app named `document-chat`.
+2. Add a synced URL pointing at `https://<your-deployment>/api/inngest`.
+3. Copy the `INNGEST_EVENT_KEY` and `INNGEST_SIGNING_KEY` into the Vercel
+   project's environment variables for the matching environment (Prod gets
+   the prod keys, Preview gets the dev keys).
+4. Redeploy. The Inngest "Functions" tab should list `extract-document`,
+   `chunk-document`, and `embed-chunks` within a minute.
+
+If the function list is empty, hit `/api/inngest` directly — the SDK
+prints a JSON registration response that explains what it discovered.
+
+## Verify a deployment
+
+After the first deploy, run the smoke script against the deployment URL:
+
+```bash
+pnpm tsx scripts/smoke.ts --base-url https://<your-deployment>.vercel.app
+```
+
+It probes `/api/health` (expects `status: "ok"`) and `/api/version` (expects
+the deployed `environment` and a non-empty `git_sha`), and exits non-zero
+on the first failure. The same script runs in the
+[`smoke.yml`](../.github/workflows/smoke.yml) workflow on push to `main`.
+
+## CI required checks
+
+The Tier 1 merge gate is two GitHub Actions checks plus the existing
+gitleaks + DCO checks. Mark these required on `main` in *Settings → Branches
+→ Branch protection rules → main*:
+
+- **`ci / build`** — lint, typecheck, contract drift, unit tests, build,
+  Playwright E2E.
+- **`ci / integration`** — Supabase-backed integration tests.
+- **`eval / eval-mock`** — golden-set eval against canned transcripts
+  (REQ-1.5.3 threshold).
+- **`dco`**, **`gitleaks`** — sign-off + secret scanning.
+
+The `eval / eval-live` job (real OpenAI + Anthropic) is **not** required —
+it runs on a nightly cron and on `workflow_dispatch` only.
 
 ## Secret hygiene
 

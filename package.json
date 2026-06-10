@@ -20,6 +20,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "license:check": "node scripts/check-license-headers.mjs",
+    "smoke": "node scripts/smoke.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,mjs,json,md,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,mjs,json,md,yaml,yml}\""
   },

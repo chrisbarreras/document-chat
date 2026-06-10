@@ -1,0 +1,43 @@
+name: smoke
+
+# Post-deploy smoke test against the production URL. Triggered on push to
+# main (after Vercel has had time to roll out — we sleep briefly to let
+# the deployment promote) and on manual dispatch. Not required for merge:
+# it gates on-call awareness, not commits.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Override base URL (defaults to SMOKE_BASE_URL secret)'
+        required: false
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'push' || vars.SMOKE_ENABLED == 'true'
+    env:
+      SMOKE_BASE_URL: ${{ github.event.inputs.base_url || secrets.SMOKE_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.1
+
+      - name: Wait for Vercel rollout
+        if: github.event_name == 'push'
+        # Vercel's production promotion lags the merge commit by ~30–90s
+        # depending on build time. Sleeping is the simplest reliable signal
+        # short of polling the Vercel API.
+        run: sleep 90
+
+      - name: Smoke
+        run: node scripts/smoke.mjs --expect-env prod --require-git-sha
