@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { getOptionalUser } from '../../../lib/auth';
 import { getDocumentRow } from '../../../lib/documents-store';
 import { DocumentEditor } from './editor';
+import { IngestionPanel } from './ingestion-panel';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,11 +29,6 @@ export default async function DocumentDetailPage({
         <dd>{doc.status}</dd>
         <dt>Version</dt>
         <dd>{doc.version}</dd>
-        <dt>Processing</dt>
-        <dd>
-          {doc.ingestion_state}
-          {doc.ingestion_error ? ` — ${doc.ingestion_error}` : ''}
-        </dd>
         <dt>Effective date</dt>
         <dd>{doc.effective_date ?? '—'}</dd>
         <dt>Size</dt>
@@ -42,6 +38,12 @@ export default async function DocumentDetailPage({
         <dt>Uploaded</dt>
         <dd>{new Date(doc.created_at).toLocaleString()}</dd>
       </dl>
+
+      <IngestionPanel
+        documentId={doc.id}
+        initialState={doc.ingestion_state}
+        initialError={doc.ingestion_error}
+      />
 
       <DocumentEditor
         doc={{

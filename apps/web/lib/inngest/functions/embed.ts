@@ -5,7 +5,8 @@
 // No SDK imports so unit tests can exercise the state machine without a real
 // embeddings client or Supabase.
 import { EMBEDDING_MODEL, type TextChunk } from '@document-chat/retrieval';
-import type { NewChunkRow } from '../storage';
+import type { IngestionState, NewChunkRow } from '../storage';
+import type { TransitionOptions } from './extract';
 
 /**
  * Dependencies for the pure embedding routine.
@@ -14,7 +15,11 @@ export interface EmbeddingDeps {
   embed: (inputs: string[]) => Promise<number[][]>;
   /** Idempotent: deletes prior chunks before inserting. */
   storeChunks: (documentId: string, rows: NewChunkRow[]) => Promise<void>;
-  setState: (documentId: string, patch: Record<string, unknown>) => Promise<void>;
+  transition: (
+    documentId: string,
+    toState: IngestionState,
+    options?: TransitionOptions,
+  ) => Promise<void>;
 }
 
 /** pgvector accepts a `[v1,v2,...]` string via PostgREST. */
@@ -39,14 +44,14 @@ export async function runEmbedding(
   chunks: TextChunk[],
 ): Promise<{ inserted: number }> {
   try {
-    await deps.setState(documentId, { ingestion_state: 'embedding', ingestion_error: null });
+    await deps.transition(documentId, 'embedding', { ingestionError: null });
 
     if (chunks.length === 0) {
       // Edge case: empty document. Reach `ready` with zero chunks so the
       // row state machine still terminates rather than wedging at
       // `embedding` forever.
       await deps.storeChunks(documentId, []);
-      await deps.setState(documentId, { ingestion_state: 'ready' });
+      await deps.transition(documentId, 'ready');
       return { inserted: 0 };
     }
 
@@ -70,14 +75,11 @@ export async function runEmbedding(
     }));
 
     await deps.storeChunks(documentId, rows);
-    await deps.setState(documentId, { ingestion_state: 'ready' });
+    await deps.transition(documentId, 'ready');
     return { inserted: rows.length };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    await deps.setState(documentId, {
-      ingestion_state: 'failed',
-      ingestion_error: message,
-    });
+    await deps.transition(documentId, 'failed', { ingestionError: message });
     throw err;
   }
 }

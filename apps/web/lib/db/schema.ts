@@ -119,6 +119,44 @@ export const chunks = pgTable(
 export type Document = InferSelectModel<typeof documents>;
 export type Chunk = InferSelectModel<typeof chunks>;
 
+// Tier 1 ingestion event kinds (REQ-1.1.5). Mirrors the OpenAPI
+// `IngestionEvent.event` enum.
+export const ingestionEventKind = pgEnum('ingestion_event_kind', [
+  'state_changed',
+  'chunk_extracted',
+  'embedding_progress',
+  'warning',
+  'failed',
+]);
+
+export const ingestionEvents = pgTable(
+  'ingestion_events',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    event: ingestionEventKind('event').notNull(),
+    fromState: ingestionState('from_state'),
+    toState: ingestionState('to_state'),
+    progressProcessed: integer('progress_processed'),
+    progressTotal: integer('progress_total'),
+    error: jsonb('error'),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('ingestion_events_document_id_idx').on(
+      table.documentId,
+      table.occurredAt,
+      table.id,
+    ),
+  ],
+);
+
+export type IngestionEventRow = InferSelectModel<typeof ingestionEvents>;
+
 // Tier 1 message role + finish reason. Tier 4 may add `tool` to role.
 export const messageRole = pgEnum('message_role', ['user', 'assistant', 'system']);
 export const messageFinishReason = pgEnum('message_finish_reason', [

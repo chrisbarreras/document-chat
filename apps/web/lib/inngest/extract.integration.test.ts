@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
 import { runExtraction, extractPdfPages } from './functions/extract';
-import { downloadDocumentObject, patchDocumentRow } from './storage';
+import { downloadDocumentObject, recordIngestionTransition } from './storage';
 
 // Requires a running local Supabase stack (see docs/testing.md). Proves the
 // extraction step:
@@ -81,7 +81,7 @@ describe('extract pipeline (integration)', () => {
       {
         download: downloadDocumentObject,
         extract: extractPdfPages,
-        setState: patchDocumentRow,
+        transition: recordIngestionTransition,
       },
       { document_id: documentId, workspace_id: ws!.id, storage_object_key: objectKey },
     );

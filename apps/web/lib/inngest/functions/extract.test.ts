@@ -19,7 +19,7 @@ function makeDeps(overrides: Partial<ExtractionDeps> = {}): ExtractionDeps {
   return {
     download: vi.fn().mockResolvedValue(HELLO_PDF),
     extract: vi.fn().mockResolvedValue({ pages: ['Hello World'], pageCount: 1 }),
-    setState: vi.fn().mockResolvedValue(undefined),
+    transition: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -40,13 +40,11 @@ describe('runExtraction', () => {
 
     expect(result.pageCount).toBe(1);
     expect(deps.download).toHaveBeenCalledWith(OBJECT_KEY);
-    expect(deps.setState).toHaveBeenNthCalledWith(1, DOCUMENT_ID, {
-      ingestion_state: 'extracting',
-      ingestion_error: null,
+    expect(deps.transition).toHaveBeenNthCalledWith(1, DOCUMENT_ID, 'extracting', {
+      ingestionError: null,
     });
-    expect(deps.setState).toHaveBeenNthCalledWith(2, DOCUMENT_ID, {
-      ingestion_state: 'chunking',
-      page_count: 1,
+    expect(deps.transition).toHaveBeenNthCalledWith(2, DOCUMENT_ID, 'chunking', {
+      pageCount: 1,
     });
   });
 
@@ -56,9 +54,8 @@ describe('runExtraction', () => {
     });
 
     await expect(runExtraction(deps, event)).rejects.toThrow('object missing');
-    expect(deps.setState).toHaveBeenLastCalledWith(DOCUMENT_ID, {
-      ingestion_state: 'failed',
-      ingestion_error: 'object missing',
+    expect(deps.transition).toHaveBeenLastCalledWith(DOCUMENT_ID, 'failed', {
+      ingestionError: 'object missing',
     });
   });
 
@@ -68,9 +65,8 @@ describe('runExtraction', () => {
     });
 
     await expect(runExtraction(deps, event)).rejects.toThrow('corrupt PDF');
-    expect(deps.setState).toHaveBeenLastCalledWith(DOCUMENT_ID, {
-      ingestion_state: 'failed',
-      ingestion_error: 'corrupt PDF',
+    expect(deps.transition).toHaveBeenLastCalledWith(DOCUMENT_ID, 'failed', {
+      ingestionError: 'corrupt PDF',
     });
   });
 });

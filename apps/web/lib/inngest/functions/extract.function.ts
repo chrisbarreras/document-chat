@@ -13,7 +13,11 @@
 // step memo, not in events.
 import { embedTexts } from '@document-chat/retrieval';
 import { inngest, EVENT_DOCUMENT_UPLOADED, type DocumentUploadedData } from '../client';
-import { downloadDocumentObject, patchDocumentRow, replaceDocumentChunks } from '../storage';
+import {
+  downloadDocumentObject,
+  recordIngestionTransition,
+  replaceDocumentChunks,
+} from '../storage';
 import { runChunking } from './chunk';
 import { runEmbedding } from './embed';
 import { extractPdfPages, runExtraction } from './extract';
@@ -32,7 +36,7 @@ export const extractDocumentFunction = inngest.createFunction(
         {
           download: downloadDocumentObject,
           extract: extractPdfPages,
-          setState: patchDocumentRow,
+          transition: recordIngestionTransition,
         },
         data,
       ),
@@ -45,7 +49,7 @@ export const extractDocumentFunction = inngest.createFunction(
         {
           embed: (inputs) => embedTexts(inputs),
           storeChunks: replaceDocumentChunks,
-          setState: patchDocumentRow,
+          transition: recordIngestionTransition,
         },
         data.document_id,
         chunks,

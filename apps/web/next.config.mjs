@@ -10,6 +10,10 @@ const nextConfig = {
   async rewrites() {
     return [
       { source: '/api/citations:resolve', destination: '/api/citations/resolve' },
+      {
+        source: '/api/documents/:document_id:reprocess',
+        destination: '/api/documents/:document_id/reprocess',
+      },
     ];
   },
 };

@@ -8,7 +8,11 @@ import { EMBEDDING_DIMENSIONS } from '@document-chat/retrieval';
 import { runChunking } from './functions/chunk';
 import { runEmbedding } from './functions/embed';
 import { extractPdfPages, runExtraction } from './functions/extract';
-import { downloadDocumentObject, patchDocumentRow, replaceDocumentChunks } from './storage';
+import {
+  downloadDocumentObject,
+  recordIngestionTransition,
+  replaceDocumentChunks,
+} from './storage';
 
 // Requires a running local Supabase stack (see docs/testing.md). The
 // embeddings call is stubbed so the test runs without network or OpenAI
@@ -86,7 +90,7 @@ describe('ingestion pipeline (integration)', () => {
       {
         download: downloadDocumentObject,
         extract: extractPdfPages,
-        setState: patchDocumentRow,
+        transition: recordIngestionTransition,
       },
       { document_id: documentId, workspace_id: ws!.id, storage_object_key: objectKey },
     );
@@ -102,7 +106,7 @@ describe('ingestion pipeline (integration)', () => {
       {
         embed: async (inputs) => inputs.map((_, i) => fakeVector(i + 1)),
         storeChunks: replaceDocumentChunks,
-        setState: patchDocumentRow,
+        transition: recordIngestionTransition,
       },
       documentId,
       chunks,
@@ -160,7 +164,7 @@ describe('ingestion pipeline (integration)', () => {
       {
         download: downloadDocumentObject,
         extract: extractPdfPages,
-        setState: patchDocumentRow,
+        transition: recordIngestionTransition,
       },
       { document_id: documentId, workspace_id: ws!.id, storage_object_key: objectKey },
     );
@@ -169,7 +173,7 @@ describe('ingestion pipeline (integration)', () => {
     const deps = {
       embed: async (inputs: string[]) => inputs.map((_, i) => fakeVector(i + 1)),
       storeChunks: replaceDocumentChunks,
-      setState: patchDocumentRow,
+      transition: recordIngestionTransition,
     };
     await runEmbedding(deps, documentId, chunks);
     await runEmbedding(deps, documentId, chunks);

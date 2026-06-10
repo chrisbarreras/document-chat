@@ -6,6 +6,7 @@
 // up to real deps lives in extract.function.ts.
 import { extractText, getDocumentProxy } from 'unpdf';
 import type { DocumentUploadedData } from '../client';
+import type { IngestionState } from '../storage';
 
 /**
  * Output of the pure extractor — a per-page text array plus the page count,
@@ -17,15 +18,25 @@ export interface ExtractionResult {
   pageCount: number;
 }
 
+export interface TransitionOptions {
+  pageCount?: number | null;
+  ingestionError?: string | null;
+  errorPayload?: unknown;
+}
+
 /**
- * Dependencies for the pure extraction routine. Production wires these to
- * the real Supabase + unpdf calls; unit tests provide stubs so the routine
- * can be exercised without touching storage, a real PDF runtime, or the DB.
+ * Dependencies for the pure extraction routine. Production wires `transition`
+ * to `recordIngestionTransition` so each state change also appends an
+ * `ingestion_events` row.
  */
 export interface ExtractionDeps {
   download: (objectKey: string) => Promise<Uint8Array>;
   extract: (pdf: Uint8Array) => Promise<ExtractionResult>;
-  setState: (documentId: string, patch: Record<string, unknown>) => Promise<void>;
+  transition: (
+    documentId: string,
+    toState: IngestionState,
+    options?: TransitionOptions,
+  ) => Promise<void>;
 }
 
 /**
@@ -46,15 +57,12 @@ export async function extractPdfPages(pdf: Uint8Array): Promise<ExtractionResult
  * Pure with respect to its `deps` argument so it's exhaustively unit-testable.
  *
  * Behavior:
- *   1. Mark the row `extracting`.
+ *   1. Mark the row `extracting` (clears any prior ingestion_error).
  *   2. Download the storage object and extract text + page count.
  *   3. Mark the row `chunking` with `page_count` persisted.
  *   4. On any thrown error: mark the row `failed` with `ingestion_error`
  *      set to the error message, then rethrow so Inngest records the
  *      failure and applies the configured retry policy.
- *
- * The returned `ExtractionResult` is what later pipeline steps (chunking,
- * embedding — landing in chunk #12) consume.
  */
 export async function runExtraction(
   deps: ExtractionDeps,
@@ -62,21 +70,14 @@ export async function runExtraction(
 ): Promise<ExtractionResult> {
   const { document_id, storage_object_key } = event;
   try {
-    await deps.setState(document_id, { ingestion_state: 'extracting', ingestion_error: null });
+    await deps.transition(document_id, 'extracting', { ingestionError: null });
     const pdf = await deps.download(storage_object_key);
     const result = await deps.extract(pdf);
-    await deps.setState(document_id, {
-      ingestion_state: 'chunking',
-      page_count: result.pageCount,
-    });
+    await deps.transition(document_id, 'chunking', { pageCount: result.pageCount });
     return result;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    await deps.setState(document_id, {
-      ingestion_state: 'failed',
-      ingestion_error: message,
-    });
+    await deps.transition(document_id, 'failed', { ingestionError: message });
     throw err;
   }
 }
-

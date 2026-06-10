@@ -15,7 +15,7 @@ function makeDeps(overrides: Partial<EmbeddingDeps> = {}): EmbeddingDeps {
   return {
     embed: vi.fn().mockResolvedValue([VECTOR, VECTOR]),
     storeChunks: vi.fn().mockResolvedValue(undefined),
-    setState: vi.fn().mockResolvedValue(undefined),
+    transition: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -27,11 +27,10 @@ describe('runEmbedding', () => {
 
     expect(result).toEqual({ inserted: 2 });
     expect(deps.embed).toHaveBeenCalledWith(['first chunk', 'second chunk']);
-    expect(deps.setState).toHaveBeenNthCalledWith(1, DOCUMENT_ID, {
-      ingestion_state: 'embedding',
-      ingestion_error: null,
+    expect(deps.transition).toHaveBeenNthCalledWith(1, DOCUMENT_ID, 'embedding', {
+      ingestionError: null,
     });
-    expect(deps.setState).toHaveBeenLastCalledWith(DOCUMENT_ID, { ingestion_state: 'ready' });
+    expect(deps.transition).toHaveBeenLastCalledWith(DOCUMENT_ID, 'ready');
 
     const inserted = vi.mocked(deps.storeChunks).mock.calls[0]![1];
     expect(inserted).toHaveLength(2);
@@ -54,15 +53,14 @@ describe('runEmbedding', () => {
     expect(result).toEqual({ inserted: 0 });
     expect(deps.embed).not.toHaveBeenCalled();
     expect(deps.storeChunks).toHaveBeenCalledWith(DOCUMENT_ID, []);
-    expect(deps.setState).toHaveBeenLastCalledWith(DOCUMENT_ID, { ingestion_state: 'ready' });
+    expect(deps.transition).toHaveBeenLastCalledWith(DOCUMENT_ID, 'ready');
   });
 
   it('marks failed and rethrows on a count mismatch from the embeddings client', async () => {
     const deps = makeDeps({ embed: vi.fn().mockResolvedValue([VECTOR]) });
     await expect(runEmbedding(deps, DOCUMENT_ID, sampleChunks)).rejects.toThrow(/count mismatch/);
-    expect(deps.setState).toHaveBeenLastCalledWith(DOCUMENT_ID, {
-      ingestion_state: 'failed',
-      ingestion_error: expect.stringContaining('count mismatch'),
+    expect(deps.transition).toHaveBeenLastCalledWith(DOCUMENT_ID, 'failed', {
+      ingestionError: expect.stringContaining('count mismatch'),
     });
     expect(deps.storeChunks).not.toHaveBeenCalled();
   });
@@ -70,9 +68,8 @@ describe('runEmbedding', () => {
   it('marks failed and rethrows when the embed client throws', async () => {
     const deps = makeDeps({ embed: vi.fn().mockRejectedValue(new Error('openai down')) });
     await expect(runEmbedding(deps, DOCUMENT_ID, sampleChunks)).rejects.toThrow('openai down');
-    expect(deps.setState).toHaveBeenLastCalledWith(DOCUMENT_ID, {
-      ingestion_state: 'failed',
-      ingestion_error: 'openai down',
+    expect(deps.transition).toHaveBeenLastCalledWith(DOCUMENT_ID, 'failed', {
+      ingestionError: 'openai down',
     });
   });
 });
