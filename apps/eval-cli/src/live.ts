@@ -79,13 +79,25 @@ export async function liveClient(opts: LiveOptions): Promise<ChatClient> {
     if (wsError) throw new Error(`workspace lookup failed: ${wsError.message}`);
     const ownerId = (workspace as { owner_id: string }).owner_id;
 
-    const { data: token, error: tokenError } = await admin.auth.admin.generateLink({
+    // Mint a real session for the workspace owner: generate a magic-link
+    // token hash with the admin API, then exchange it for an access-token JWT
+    // via verifyOtp. The JWT is what the API's Bearer auth validates (a raw
+    // `hashed_token` is only a verification hash, not a usable access token).
+    const { data: link, error: linkError } = await admin.auth.admin.generateLink({
       type: 'magiclink',
       email: `eval+${ownerId}@example.com`,
     });
-    if (tokenError) throw new Error(`session mint failed: ${tokenError.message}`);
-    const accessToken = (token as { properties?: { hashed_token?: string } }).properties?.hashed_token;
-    if (!accessToken) throw new Error('session mint did not return a token');
+    if (linkError) throw new Error(`link generation failed: ${linkError.message}`);
+    const tokenHash = (link as { properties?: { hashed_token?: string } }).properties?.hashed_token;
+    if (!tokenHash) throw new Error('link generation did not return a token hash');
+
+    const { data: session, error: verifyError } = await admin.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: 'magiclink',
+    });
+    if (verifyError) throw new Error(`session mint failed: ${verifyError.message}`);
+    const accessToken = session.session?.access_token;
+    if (!accessToken) throw new Error('session mint did not return an access token');
 
     const headers = {
       'content-type': 'application/json',
