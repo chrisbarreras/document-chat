@@ -54,3 +54,7 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Eval run artifacts (generated locally / in CI)
+eval-*.json
+eval-document-map.json
