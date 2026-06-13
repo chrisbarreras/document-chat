@@ -1,0 +1,77 @@
+name: toolchain-updates
+
+# Stopgap version watcher that needs no GitHub App — it runs entirely on the
+# built-in GITHUB_TOKEN. Once someone with admin installs the Renovate app
+# (see .github/renovate.json), Renovate supersedes this and it can be deleted.
+#
+# Weekly, it compares the Supabase CLI version pinned in ci.yml against the
+# latest upstream release and opens a tracking issue when CI is behind. This is
+# the safety net for the drift that bit us when the pin floated.
+
+on:
+  schedule:
+    - cron: '0 8 * * 1' # Mondays 08:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  supabase-cli:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check pinned Supabase CLI against latest release
+        run: |
+          set -euo pipefail
+
+          # Pinned value lives on the line after the `depName=supabase/cli`
+          # renovate annotation in ci.yml.
+          pinned=$(grep -A1 'depName=supabase/cli' .github/workflows/ci.yml \
+            | grep -oE 'version:[[:space:]]*[0-9][0-9.]*' \
+            | grep -oE '[0-9][0-9.]*')
+          latest=$(gh api repos/supabase/cli/releases/latest --jq '.tag_name' | sed 's/^v//')
+
+          echo "pinned=$pinned latest=$latest"
+
+          if [ -z "$pinned" ] || [ -z "$latest" ]; then
+            echo "Could not determine versions (pinned='$pinned' latest='$latest')." >&2
+            exit 1
+          fi
+
+          # Up to date, or pin is somehow ahead — nothing to do.
+          if [ "$pinned" = "$latest" ]; then
+            echo "Supabase CLI is up to date."
+            exit 0
+          fi
+          newest=$(printf '%s\n%s\n' "$pinned" "$latest" | sort -V | tail -1)
+          if [ "$newest" != "$latest" ]; then
+            echo "Pin ($pinned) is ahead of latest release ($latest); nothing to do."
+            exit 0
+          fi
+
+          # One open tracking issue at a time — don't pile up duplicates.
+          existing=$(gh issue list --state open --search "in:title Supabase CLI update available" --json number --jq 'length')
+          if [ "$existing" != "0" ]; then
+            echo "A tracking issue is already open; skipping."
+            exit 0
+          fi
+
+          body=$(printf '%s\n' \
+            "A newer Supabase CLI has been released." \
+            "" \
+            "- CI pins (\`.github/workflows/ci.yml\`): **$pinned**" \
+            "- Latest release: **$latest**" \
+            "" \
+            "Bump the pinned \`version:\` under \`supabase/setup-cli\` in a PR so the toolchain change runs through CI and is reviewable." \
+            "Release notes: https://github.com/supabase/cli/releases/tag/v$latest" \
+            "" \
+            "_Opened automatically by the \`toolchain-updates\` workflow._")
+
+          gh issue create \
+            --title "Supabase CLI update available: $latest (CI pinned at $pinned)" \
+            --body "$body"
