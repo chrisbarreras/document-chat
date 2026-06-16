@@ -1,0 +1,38 @@
+name: pin-guard
+
+# Enforces the pinning *policy* (the complement to toolchain-updates, which
+# detects upstream releases). A linter can't tell you a new version exists, but
+# it can stop a floating ref from being reintroduced — which is what turned a
+# green commit red out of nowhere. Fails the build if any workflow uses a
+# non-deterministic toolchain ref.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  no-floating-refs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reject floating toolchain refs in workflows
+        run: |
+          set -euo pipefail
+
+          # Matches `setup-cli`-style `version: latest` inputs and unpinned
+          # `@main`/`@master` action refs. `ubuntu-latest` (a `runs-on` value)
+          # is not matched. Comment lines are stripped so docs that *mention*
+          # a floating ref don't trip the guard.
+          matches=$(grep -rnE 'version:[[:space:]]*latest|uses:[^@]*@(main|master)([[:space:]]|$)' .github/workflows/ \
+            | grep -vE ':[0-9]+:[[:space:]]*#' || true)
+          if [ -n "$matches" ]; then
+            echo "::error::Floating toolchain ref(s) found. Pin to an explicit version (toolchain-updates surfaces upgrades):"
+            echo "$matches"
+            exit 1
+          fi
+          echo "No floating toolchain refs. ✓"

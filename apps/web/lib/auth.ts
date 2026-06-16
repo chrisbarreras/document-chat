@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+import { headers } from 'next/headers';
 import type { User } from '@supabase/supabase-js';
 import { createSSRClient } from './supabase/server';
 
@@ -22,9 +23,14 @@ export async function getOptionalUser(): Promise<User | null> {
   if (!isSupabaseConfigured()) return null;
   try {
     const supabase = await createSSRClient();
+    // Bearer-authenticated callers (programmatic API clients) present their
+    // JWT in the Authorization header; validate it directly. Cookie-based
+    // browser sessions fall through to the session-backed getUser().
+    const authHeader = (await headers()).get('authorization');
+    const token = authHeader?.replace(/^Bearer\s+/i, '');
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = token ? await supabase.auth.getUser(token) : await supabase.auth.getUser();
     return user ?? null;
   } catch {
     return null;

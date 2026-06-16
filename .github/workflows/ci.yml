@@ -78,7 +78,13 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pinned, not `latest`: `latest` resolves at job runtime against the
+          # calendar, so a green commit can silently turn red when upstream
+          # ships a release (this is exactly what bit us in June 2026). Renovate
+          # opens a PR to bump this (see .github/renovate.json) so toolchain
+          # changes are reviewable instead of arriving invisibly.
+          # renovate: datasource=github-releases depName=supabase/cli
+          version: 2.106.0
 
       - name: Start Supabase
         run: supabase start
