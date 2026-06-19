@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: Apache-2.0
+name: automerge
+
+# Enable auto-merge on every non-draft PR so it merges automatically once the
+# required status checks pass. "Green build -> merge", no review required.
+# Requires one-time owner setup (Allow auto-merge + branch protection +
+# Actions write permission) — see docs/ci-merge-automation.md.
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable-auto-merge:
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable auto-merge (squash)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        # Tolerant: until the owner enables "Allow auto-merge" in repo settings
+        # this is a harmless no-op, so the job never blocks a PR.
+        run: |
+          gh pr merge --auto --squash "$PR" -R "$REPO" \
+            || echo "auto-merge not active yet — owner must enable it (see docs/ci-merge-automation.md)"
