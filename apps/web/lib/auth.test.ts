@@ -3,22 +3,34 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { User } from '@supabase/supabase-js';
 
 vi.mock('./supabase/server', () => ({ createSSRClient: vi.fn() }));
+vi.mock('next/headers', () => ({ headers: vi.fn() }));
 import { createSSRClient } from './supabase/server';
+import { headers } from 'next/headers';
 import { isSupabaseConfigured, getOptionalUser } from './auth';
 
 const ORIG_ENV = { ...process.env };
 const user = { id: '00000000-0000-0000-0000-000000000001' } as User;
 
-function mockGetUser(result: unknown): void {
-  vi.mocked(createSSRClient).mockResolvedValue({
-    auth: { getUser: vi.fn().mockResolvedValue(result) },
-  } as unknown as Awaited<ReturnType<typeof createSSRClient>>);
+function setAuthHeader(value: string | null): void {
+  vi.mocked(headers).mockResolvedValue(
+    new Headers(value ? { authorization: value } : {}) as never,
+  );
+}
+
+// Wire createSSRClient to a fake whose auth.getUser returns `result`; returns
+// the getUser mock so tests can assert how it was called.
+function mockGetUser(result: unknown) {
+  const getUser = vi.fn().mockResolvedValue(result);
+  vi.mocked(createSSRClient).mockResolvedValue({ auth: { getUser } } as never);
+  return getUser;
 }
 
 beforeEach(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost:54321';
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-key';
   vi.mocked(createSSRClient).mockReset();
+  vi.mocked(headers).mockReset();
+  setAuthHeader(null); // default: no Authorization header (cookie-session path)
 });
 
 afterEach(() => {
@@ -49,9 +61,17 @@ describe('getOptionalUser', () => {
     expect(createSSRClient).not.toHaveBeenCalled();
   });
 
-  it('returns the user when there is a session', async () => {
-    mockGetUser({ data: { user } });
+  it('returns the cookie-session user when there is no Authorization header', async () => {
+    const getUser = mockGetUser({ data: { user } });
     expect(await getOptionalUser()).toBe(user);
+    expect(getUser).toHaveBeenCalledWith();
+  });
+
+  it('validates a Bearer token directly when one is present', async () => {
+    setAuthHeader('Bearer tok-123');
+    const getUser = mockGetUser({ data: { user } });
+    expect(await getOptionalUser()).toBe(user);
+    expect(getUser).toHaveBeenCalledWith('tok-123');
   });
 
   it('returns null when there is no session', async () => {
