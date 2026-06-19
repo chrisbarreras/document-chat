@@ -73,3 +73,35 @@ describe('POST /documents/uploads', () => {
     expect(body.max_size_bytes).toBe(52_428_800);
   });
 });
+
+describe('POST /documents/uploads (validation + failures)', () => {
+  it('500 when the workspace is not provisioned', async () => {
+    vi.mocked(getCurrentWorkspace).mockResolvedValue(null);
+    const res = await POST(req({ filename: 'a.pdf', size_bytes: 10, content_type: 'application/pdf' }));
+    expect(res.status).toBe(500);
+  });
+
+  it('400 on invalid JSON', async () => {
+    const res = await POST(
+      new Request('http://localhost/api/documents/uploads', {
+        method: 'POST',
+        body: '{nope',
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).code).toBe('request.invalid_json');
+  });
+
+  it('400 when required fields are missing', async () => {
+    expect((await POST(req({ filename: 'a.pdf', content_type: 'application/pdf' }))).status).toBe(400);
+    expect((await POST(req({ size_bytes: 10, content_type: 'application/pdf' }))).status).toBe(400);
+  });
+
+  it('500 when the signed URL cannot be minted', async () => {
+    vi.mocked(mintUploadUrl).mockResolvedValue(null);
+    const res = await POST(req({ filename: 'a.pdf', size_bytes: 10, content_type: 'application/pdf' }));
+    expect(res.status).toBe(500);
+    expect((await res.json()).code).toBe('storage.signed_url_failed');
+  });
+});

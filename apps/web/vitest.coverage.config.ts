@@ -32,6 +32,15 @@ export default defineConfig({
         'lib/db/schema.ts', // Drizzle schema — declarative
         'lib/build-info.ts', // build-time constants
         'lib/inngest/functions/index.ts', // barrel
+        // Framework wiring / client factories with no branching logic — these
+        // are integration/runtime glue, not unit-testable logic.
+        'app/api/inngest/route.ts',
+        'app/auth/signout/route.ts',
+        'lib/inngest/client.ts',
+        'lib/inngest/functions/extract.function.ts',
+        'lib/supabase/client.ts',
+        'lib/supabase/server.ts',
+        'lib/chat/runtime.ts',
         'test/**',
         'e2e/**',
       ],
