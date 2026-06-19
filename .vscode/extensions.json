@@ -2,6 +2,7 @@
   "recommendations": [
     "vitest.explorer",
     "ms-playwright.playwright",
+    "ryanluker.vscode-coverage-gutters",
     "dbaeumer.vscode-eslint",
     "esbenp.prettier-vscode",
     "ms-azuretools.vscode-docker",

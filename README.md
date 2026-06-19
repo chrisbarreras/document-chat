@@ -101,9 +101,24 @@ scripts/                  Repo tooling (license-header check, smoke probe)
 | `pnpm smoke -- --base-url <url>` | Post-deploy smoke probe against `/api/health` + `/api/version` |
 | `pnpm --filter @document-chat/contracts run generate` | Regenerate the TS client from the spec |
 | `pnpm --filter eval-cli run start -- --mock` | Run the golden eval against canned transcripts |
-| `pnpm --filter web run test:integration` | Supabase-backed integration tests |
-| `pnpm --filter web run test:e2e` | Playwright end-to-end tests |
 | `pnpm db:start` / `pnpm db:reset` / `pnpm db:stop` | Local Supabase lifecycle |
+
+## Running tests
+
+All test commands run from the repo root. Integration and e2e start Supabase automatically (`supabase start` is idempotent).
+
+| Command | What it runs | Prerequisites |
+|---|---|---|
+| `pnpm test` (alias `pnpm test:unit`) | Unit + contract tests (Vitest), all packages | none |
+| `pnpm test:integration` | Supabase-backed integration tests | Docker (auto-starts Supabase) |
+| `pnpm test:e2e` | Playwright end-to-end tests (auto-builds the web app first) | Docker + browser (see setup) |
+| `pnpm test:e2e:ui` | Playwright UI mode — visual runner / debugger | same as `test:e2e` |
+| `pnpm test:all` | unit → integration → e2e, in sequence | Docker + browser |
+| `pnpm test:e2e:setup` | One-time: install the Playwright chromium browser + OS deps | sudo (Linux) |
+
+E2E notes:
+- Run `pnpm test:e2e:setup` once per machine before the first `pnpm test:e2e`.
+- The VS Code Playwright Test Explorer is currently incompatible with the pinned Playwright on Ubuntu 26.04 — run e2e from the terminal (or `pnpm test:e2e:ui` for a visual runner).
 
 ## Planning docs
 

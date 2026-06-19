@@ -101,8 +101,21 @@ jobs:
             --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY \
             | sed 's/"//g' >> "$GITHUB_ENV"
 
-      - name: Integration tests (vitest)
-        run: pnpm --filter web run test:integration
+      # Report-only: runs unit + integration tests across the monorepo with
+      # coverage. This job is not a required check, so it never blocks merges;
+      # the required `build` job's `pnpm run test` remains the test gate.
+      - name: Coverage (report-only)
+        run: pnpm run coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            apps/web/coverage
+            packages/*/coverage
+          if-no-files-found: ignore
 
       - name: Stop Supabase
         if: always()
