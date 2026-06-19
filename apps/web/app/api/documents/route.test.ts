@@ -135,3 +135,78 @@ describe('POST /documents (finalize)', () => {
     expect(res.status).toBe(201);
   });
 });
+
+describe('GET /documents (validation + filters)', () => {
+  it('500 when the workspace is not provisioned', async () => {
+    vi.mocked(getCurrentWorkspace).mockResolvedValue(null);
+    const res = await GET(new Request('http://localhost/api/documents'));
+    expect(res.status).toBe(500);
+    expect((await res.json()).code).toBe('workspace.not_provisioned');
+  });
+
+  it('400 on an invalid status', async () => {
+    expect((await GET(new Request('http://localhost/api/documents?status=bogus'))).status).toBe(400);
+  });
+
+  it('400 on an invalid order', async () => {
+    expect((await GET(new Request('http://localhost/api/documents?order=sideways'))).status).toBe(400);
+  });
+
+  it('400 on a non-integer / out-of-range limit', async () => {
+    expect((await GET(new Request('http://localhost/api/documents?limit=0'))).status).toBe(400);
+    expect((await GET(new Request('http://localhost/api/documents?limit=abc'))).status).toBe(400);
+    expect((await GET(new Request('http://localhost/api/documents?limit=999'))).status).toBe(400);
+  });
+
+  it('forwards status, q, cursor, and ascending order to the store', async () => {
+    await GET(
+      new Request('http://localhost/api/documents?status=current&q=report&cursor=abc&order=asc&limit=5'),
+    );
+    expect(listDocuments).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'current', q: 'report', cursor: 'abc', ascending: true, limit: 5 }),
+    );
+  });
+});
+
+describe('POST /documents (validation + failures)', () => {
+  it('500 when the workspace is not provisioned', async () => {
+    vi.mocked(getCurrentWorkspace).mockResolvedValue(null);
+    expect((await POST(req({ upload_id: UPLOAD_ID, title: 'x' }))).status).toBe(500);
+  });
+
+  it('400 on invalid JSON', async () => {
+    const res = await POST(
+      new Request('http://localhost/api/documents', {
+        method: 'POST',
+        body: '{not json',
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).code).toBe('request.invalid_json');
+  });
+
+  it('400 when upload_id or title is missing', async () => {
+    expect((await POST(req({ title: 'x' }))).status).toBe(400);
+    expect((await POST(req({ upload_id: UPLOAD_ID }))).status).toBe(400);
+  });
+
+  it('413 when the staged object exceeds the size limit', async () => {
+    vi.mocked(findUploadedObject).mockResolvedValue({ size: 60_000_000, mimetype: 'application/pdf' });
+    const res = await POST(req({ upload_id: UPLOAD_ID, title: 'x' }));
+    expect(res.status).toBe(413);
+    expect((await res.json()).code).toBe('document.too_large');
+  });
+
+  it('415 when the staged object is not a PDF', async () => {
+    vi.mocked(findUploadedObject).mockResolvedValue({ size: 1024, mimetype: 'text/plain' });
+    expect((await POST(req({ upload_id: UPLOAD_ID, title: 'x' }))).status).toBe(415);
+  });
+
+  it('500 when the document row cannot be created', async () => {
+    vi.mocked(insertDocument).mockResolvedValue(null);
+    const res = await POST(req({ upload_id: UPLOAD_ID, title: 'x' }));
+    expect(res.status).toBe(500);
+    expect((await res.json()).code).toBe('document.create_failed');
+  });
+});
