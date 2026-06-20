@@ -132,7 +132,9 @@ We'd switch only if a concrete competitive threat appears.
 Things we've considered but explicitly deferred. Capture here so they don't
 clutter the active plan.
 
-- Mobile clients
+- Mobile clients — deferred until after Tiers 1–4. Approach when revisited:
+  **PWA → Capacitor → React Native** (cost order), reusing the API-first contract
+  and generated client. See implementation.md, "Beyond the tiers."
 - Voice interface
 - Multi-language support
 - On-prem deployment automation
