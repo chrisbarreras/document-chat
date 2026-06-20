@@ -2,7 +2,12 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect, vi } from 'vitest';
-import { extractPdfPages, runExtraction, type ExtractionDeps } from './extract';
+import {
+  extractPdfPages,
+  runExtraction,
+  NoExtractableTextError,
+  type ExtractionDeps,
+} from './extract';
 
 const DOCUMENT_ID = '22222222-2222-2222-2222-222222222222';
 const WORKSPACE_ID = '00000000-0000-0000-0000-0000000000aa';
@@ -68,5 +73,20 @@ describe('runExtraction', () => {
     expect(deps.transition).toHaveBeenLastCalledWith(DOCUMENT_ID, 'failed', {
       ingestionError: 'corrupt PDF',
     });
+  });
+
+  it('fails loud with NoExtractableTextError when the PDF has no text (scanned/image)', async () => {
+    const deps = makeDeps({
+      extract: vi.fn().mockResolvedValue({ pages: ['  ', '\n\t'], pageCount: 2 }),
+    });
+
+    await expect(runExtraction(deps, event)).rejects.toBeInstanceOf(NoExtractableTextError);
+    // Never advances to chunking; lands `failed` with a clear reason.
+    expect(deps.transition).not.toHaveBeenCalledWith(DOCUMENT_ID, 'chunking', expect.anything());
+    expect(deps.transition).toHaveBeenLastCalledWith(
+      DOCUMENT_ID,
+      'failed',
+      expect.objectContaining({ ingestionError: expect.stringMatching(/no extractable text/i) }),
+    );
   });
 });

@@ -41,6 +41,10 @@ export function UploadForm() {
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file) return;
+    // Capture the form element now: React nulls `event.currentTarget` once the
+    // handler yields at the first `await`, so reading it later threw
+    // "Cannot read properties of null (reading 'reset')".
+    const form = event.currentTarget;
     setError(null);
     const contentType = file.type || 'application/pdf';
 
@@ -76,7 +80,7 @@ export function UploadForm() {
       setPhase('done');
       setFile(null);
       setTitle('');
-      event.currentTarget.reset();
+      form.reset();
       router.refresh();
     } catch (err) {
       setPhase('error');

@@ -57,6 +57,9 @@ export function ChatClient({ chatId, initialMessages, autoSendContent }: ChatCli
       url: `/api/chats/${chatId}/messages`,
       body: { content: autoSendContent },
     });
+    // Drop the `?q=…` from the URL (without a remount) so a refresh doesn't
+    // re-send the same first message and create a duplicate turn.
+    window.history.replaceState(null, '', `/chats/${chatId}`);
     // We intentionally exclude `stream` from deps: `start` is stable across
     // renders, and `stream` itself updates on every event which would loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -84,7 +87,10 @@ export function ChatClient({ chatId, initialMessages, autoSendContent }: ChatCli
     });
   }
 
-  const showStreaming = stream.status === 'streaming' || stream.status === 'completed';
+  // Only show the live streaming bubble while streaming. Once completed, the
+  // persisted assistant message is appended to `messages` above — keeping the
+  // streaming bubble visible on 'completed' rendered the answer twice.
+  const showStreaming = stream.status === 'streaming';
 
   return (
     <div data-testid="chat-client" className="chat-layout">

@@ -18,6 +18,20 @@ export interface ExtractionResult {
   pageCount: number;
 }
 
+/**
+ * Thrown when a PDF yields no extractable text — almost always a scanned /
+ * photocopied document whose pages are images. We don't OCR in Tier 1, so this
+ * is a terminal, deterministic failure: the Inngest wrapper converts it to a
+ * NonRetriableError so the pipeline fails fast with a clear reason instead of
+ * retrying and producing a chunk-less, unsearchable "ready" document.
+ */
+export class NoExtractableTextError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NoExtractableTextError';
+  }
+}
+
 export interface TransitionOptions {
   pageCount?: number | null;
   ingestionError?: string | null;
@@ -73,6 +87,12 @@ export async function runExtraction(
     await deps.transition(document_id, 'extracting', { ingestionError: null });
     const pdf = await deps.download(storage_object_key);
     const result = await deps.extract(pdf);
+    if (!result.pages.some((page) => page.trim().length > 0)) {
+      throw new NoExtractableTextError(
+        'No extractable text found. This PDF appears to be scanned images; ' +
+          'OCR is not supported, so it cannot be indexed.',
+      );
+    }
     await deps.transition(document_id, 'chunking', { pageCount: result.pageCount });
     return result;
   } catch (err) {

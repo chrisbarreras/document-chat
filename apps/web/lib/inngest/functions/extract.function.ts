@@ -11,6 +11,7 @@
 // keeps the size of every event payload tiny (`document.uploaded` only); the
 // large intermediate values (per-page text, chunk records) live inside the
 // step memo, not in events.
+import { NonRetriableError } from 'inngest';
 import { embedTexts } from '@document-chat/retrieval';
 import { inngest, EVENT_DOCUMENT_UPLOADED, type DocumentUploadedData } from '../client';
 import {
@@ -20,7 +21,7 @@ import {
 } from '../storage';
 import { runChunking } from './chunk';
 import { runEmbedding } from './embed';
-import { extractPdfPages, runExtraction } from './extract';
+import { extractPdfPages, runExtraction, NoExtractableTextError } from './extract';
 
 export const extractDocumentFunction = inngest.createFunction(
   {
@@ -31,16 +32,23 @@ export const extractDocumentFunction = inngest.createFunction(
   async ({ event, step }) => {
     const data = event.data as DocumentUploadedData;
 
-    const extraction = await step.run('extract', () =>
-      runExtraction(
-        {
-          download: downloadDocumentObject,
-          extract: extractPdfPages,
-          transition: recordIngestionTransition,
-        },
-        data,
-      ),
-    );
+    const extraction = await step.run('extract', async () => {
+      try {
+        return await runExtraction(
+          {
+            download: downloadDocumentObject,
+            extract: extractPdfPages,
+            transition: recordIngestionTransition,
+          },
+          data,
+        );
+      } catch (err) {
+        // A scanned/image PDF (no extractable text) is deterministic — the row
+        // is already marked `failed`; don't burn retries on it.
+        if (err instanceof NoExtractableTextError) throw new NonRetriableError(err.message);
+        throw err;
+      }
+    });
 
     const chunks = await step.run('chunk', () => runChunking(extraction));
 

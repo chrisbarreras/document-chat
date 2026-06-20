@@ -23,10 +23,16 @@ export function NewChatComposer() {
     setBusy(true);
     setError(null);
     try {
+      // Create the chat with a title only — do NOT send first_message here.
+      // The chat page auto-sends (and persists) the first message exactly once
+      // via /messages; persisting it here too produced a duplicate user
+      // message (one row from create + one from the auto-send). Title mirrors
+      // the server's defaultChatTitle so it still reflects the question.
+      const title = trimmed.length > 60 ? `${trimmed.slice(0, 57)}…` : trimmed;
       const res = await fetch('/api/chats', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ first_message: { content: trimmed } }),
+        body: JSON.stringify({ title }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { detail?: string };
