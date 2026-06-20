@@ -21,17 +21,36 @@ the automation is already in the repo.
    permissions* → select **Read and write permissions**. (Lets `automerge.yml`
    enable auto-merge via `GITHUB_TOKEN`.)
 
-3. **Branch protection on `main`** — Settings → Branches → *Add branch ruleset*
-   (or protection rule) for `main`:
-   - **Require status checks to pass** — add: `build`, `integration`,
-     `eval-mock`, `scan`, `no-floating-refs`. (These are the always-running CI
-     jobs; `smoke` and `eval-live` are intentionally skipped, so don't require
-     them.)
-   - **Do NOT** require pull request reviews (0 approvals).
-   - **Do NOT** enable "Require branches to be up to date before merging" —
-     that forces the *Update branch* merge that previously produced unsigned
-     merge commits and a corrupted lockfile. Leaving it off lets auto-merge
-     handle out-of-date branches itself.
+3. **Branch protection on `main`** — Settings → **Branches** (under "Code and
+   automation") → **Add branch protection rule**. Then:
+
+   1. **Branch name pattern:** `main`
+   2. ✅ **Require a pull request before merging**
+      - **Required approvals:** set to **0** (we don't review each other's work).
+      - Leave "Dismiss stale approvals", "Require review from Code Owners", and
+        "Require approval of the most recent reviewable push" **unchecked**.
+      - (This blocks direct pushes to `main` so everything goes through a PR —
+        but needs no reviewer.)
+   3. ✅ **Require status checks to pass before merging**
+      - In the search box, add each of these (type the name, click it):
+        `build`, `integration`, `eval-mock`, `scan`, `no-floating-refs`.
+      - ❌ **Leave "Require branches to be up to date before merging" UNCHECKED.**
+        Checking it forces the *Update branch* merge that previously produced
+        unsigned merge commits and a corrupted `pnpm-lock.yaml`. Off lets
+        auto-merge handle out-of-date branches itself.
+      - Note: a check only appears in the picker after it has run at least once.
+        They've all run on recent PRs, so they should be searchable. `smoke` and
+        `eval-live` are intentionally skipped — **don't** require them.
+   4. Leave everything else at defaults (no "require signed commits", no "require
+      linear history", no "require conversation resolution" unless you want them).
+   5. Optional: leave **"Do not allow bypassing the above settings" unchecked** so
+      an admin can still force a merge in an emergency.
+   6. Click **Create** (or **Save changes**).
+
+   > Newer "Rulesets" UI instead of classic rules? Settings → **Rules → Rulesets
+   > → New branch ruleset** → Target = `main` → enable **Require a pull request**
+   > (0 approvals) and **Require status checks to pass** with the same five checks;
+   > keep "Require branches to be up to date" off. Either mechanism works.
 
 ## Result
 
