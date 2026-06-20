@@ -44,34 +44,111 @@ Supabase values come from `pnpm db:start` output. See
 
 ## Architecture
 
-API-first: the OpenAPI 3.1 spec in `packages/contracts` is the source of
-truth. The backend implements it and the frontend consumes a generated,
-type-checked client. CI fails if the implementation drifts from the contract.
+A retrieval-augmented Q&A service over your own PDFs: every answer streams in
+with inline citations that link back to the exact source passage. It's
+**API-first** — an OpenAPI 3.1 contract drives both the backend and a generated,
+type-safe frontend client — and runs entirely on managed cloud services.
+
+### Deployed system
 
 ```mermaid
-flowchart LR
-  subgraph repo["monorepo (pnpm + Turborepo)"]
-    contracts["packages/contracts\nOpenAPI 3.1 spec\n+ generated TS types"]
-    retrieval["packages/retrieval\nchunking + embeddings + kNN"]
-    eval["packages/eval\ngolden Q&A scoring"]
-    web["apps/web\nNext.js 15\nRoute Handlers + UI"]
-    cli["apps/eval-cli\nmock + live runners"]
+flowchart TB
+  user([User])
+
+  subgraph vercel["▲ Vercel"]
+    ui["Web app · Next.js 15<br/>React UI + streaming chat"]
+    api["API · Route Handlers<br/>OpenAPI 3.1 · SSE"]
   end
 
-  contracts -- "generated client + SPEC_VERSION" --> web
-  contracts -- "schemas" --> retrieval
-  retrieval -- "search + providers" --> web
-  eval --> cli
-  cli -- "scores deployed API" --> web
+  subgraph supabase["Supabase"]
+    auth["Auth · JWT + row-level security"]
+    db[("Postgres + pgvector<br/>documents · chunks · chats")]
+    store[["Storage · PDF uploads"]]
+  end
 
-  browser["Browser"] -- "HTTP / SSE" --> web
-  web --> supabase[("Supabase\nPostgres + pgvector\nAuth + Storage")]
-  web --> openai["OpenAI\nembeddings"]
-  web --> claude["Anthropic\nClaude"]
-  web --> inngest["Inngest\nbackground jobs"]
+  jobs["Inngest<br/>durable ingestion pipeline"]
+  openai["OpenAI<br/>embeddings"]
+  claude["Anthropic Claude<br/>answers + citations"]
+
+  user <-->|"HTTPS · SSE"| ui
+  ui --> api
+  user -.->|"direct signed-URL upload"| store
+  api --> auth
+  api --> db
+  api -->|"emit document.uploaded"| jobs
+  api -->|"embed query"| openai
+  api -->|"stream answer"| claude
+  jobs -->|"download PDF"| store
+  jobs -->|"embed chunks"| openai
+  jobs -->|"write chunks + vectors"| db
+
+  classDef vercel fill:#111111,color:#ffffff,stroke:#111111;
+  classDef supabase fill:#3ecf8e,color:#04231a,stroke:#1a9c6b;
+  classDef inngest fill:#6d5cff,color:#ffffff,stroke:#4a3fd0;
+  classDef openai fill:#10a37f,color:#ffffff,stroke:#0c7d61;
+  classDef anthropic fill:#d97757,color:#1a1a1a,stroke:#b85c3e;
+  class ui,api vercel;
+  class auth,db,store supabase;
+  class jobs inngest;
+  class openai openai;
+  class claude anthropic;
 ```
 
-Full detail: [architecture.md](./architecture.md).
+### How ingestion works — upload → searchable
+
+The browser uploads straight to storage via a signed URL (bypassing serverless
+body limits); a durable Inngest pipeline then extracts, chunks, and embeds the
+document, streaming live status to the UI.
+
+```mermaid
+sequenceDiagram
+  actor U as User
+  participant API as Vercel API
+  participant ST as Supabase Storage
+  participant DB as Postgres + pgvector
+  participant IN as Inngest
+  participant OA as OpenAI
+
+  U->>API: request upload URL
+  API-->>U: signed URL
+  U->>ST: upload PDF (direct)
+  U->>API: finalize upload
+  API->>DB: create document (pending)
+  API->>IN: emit document.uploaded
+  IN->>ST: download PDF
+  IN->>IN: extract text → chunk
+  IN->>OA: embed chunks
+  IN->>DB: store chunks + vectors → mark ready
+  Note over U,DB: UI streams pending → extracting → chunking → embedding → ready (SSE)
+```
+
+### How a question is answered — RAG + citations
+
+The query is embedded and matched against the document vectors; the most
+relevant chunks are handed to Claude, which streams an answer whose citations
+point back to specific source chunks.
+
+```mermaid
+sequenceDiagram
+  actor U as User
+  participant API as Vercel API
+  participant OA as OpenAI
+  participant DB as Postgres + pgvector
+  participant CL as Anthropic Claude
+
+  U->>API: ask a question
+  API->>OA: embed the question
+  API->>DB: vector kNN search (top-k chunks)
+  DB-->>API: most relevant chunks
+  API->>CL: question + retrieved context
+  CL-->>API: streamed answer with citations
+  API-->>U: live tokens + citation chips (SSE)
+  API->>DB: persist message + citations
+```
+
+Repository layout and the contract-first workflow are covered in
+[Project structure](#project-structure) below; full detail in
+[architecture.md](./architecture.md).
 
 ## Project structure
 
