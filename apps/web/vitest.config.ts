@@ -2,6 +2,10 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // Transform JSX in *.test.tsx (component tests) with the automatic runtime —
+  // tsconfig uses jsx:"preserve" for Next, which esbuild would otherwise leave
+  // untransformed.
+  esbuild: { jsx: 'automatic' },
   test: {
     environment: 'node',
     include: ['app/**/*.test.ts', 'app/**/*.test.tsx', 'lib/**/*.test.ts'],
