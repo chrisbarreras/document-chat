@@ -252,6 +252,26 @@ generic vector-RAG products.
 
 ---
 
+## Beyond the tiers — deferred enhancements
+
+Sequenced **after Tiers 1–4 ship** — don't pull forward (see the parking lot in
+[goals.md](./goals.md#out-of-scope-topics-parking-lot)).
+
+- **Mobile.** The app is web-first (Next.js + shadcn/ui). When mobile is
+  warranted, escalate in cost order, reusing the API-first contract and the
+  generated TS client with **no backend changes**:
+  1. **PWA** — add a manifest + service worker (installable, web-push, basic
+     offline). ~100% reuse, no rewrite.
+  2. **Capacitor** — wrap the existing web UI in a native shell for App Store /
+     Play Store presence + native APIs (camera, push). ~100% UI reuse.
+  3. **React Native / Expo** — only if a mobile-*native* capability becomes a
+     differentiator (on-device document capture → upload via the existing
+     signed-URL flow; push on ingestion `ready`). Reuses the API client + data
+     layer + types; the shadcn/Tailwind view layer is rebuilt (NativeWind /
+     Tamagui). Gate behind an ADR.
+
+---
+
 ## Working agreements
 
 Two-person team, one a recent CS grad. These agreements protect code quality
