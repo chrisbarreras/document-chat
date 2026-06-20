@@ -160,16 +160,17 @@ on the first failure. The same script runs in the
 
 ## CI required checks
 
-The Tier 1 merge gate is two GitHub Actions checks plus the existing
-gitleaks + DCO checks. Mark these required on `main` in *Settings → Branches
-→ Branch protection rules → main*:
+Mark these GitHub Actions checks required on `main` (*Settings → Branches →
+Branch protection rules → main*). See
+[ci-merge-automation.md](./ci-merge-automation.md) for the full auto-merge setup.
 
-- **`ci / build`** — lint, typecheck, contract drift, unit tests, build,
+- **`build`** — lint, typecheck, contract drift, unit tests, build,
   Playwright E2E.
-- **`ci / integration`** — Supabase-backed integration tests.
-- **`eval / eval-mock`** — golden-set eval against canned transcripts
+- **`integration`** — Supabase-backed integration tests.
+- **`eval-mock`** — golden-set eval against canned transcripts
   (REQ-1.5.3 threshold).
-- **`dco`**, **`gitleaks`** — sign-off + secret scanning.
+- **`scan`** — gitleaks secret scanning.
+- **`no-floating-refs`** — guards against floating GitHub Action refs.
 
 The `eval / eval-live` job (real OpenAI + Anthropic) is **not** required —
 it runs on a nightly cron and on `workflow_dispatch` only.

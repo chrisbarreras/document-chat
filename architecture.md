@@ -63,7 +63,7 @@ meet at the spec.
 | Secrets (local) | Doppler / 1Password CLI | Shared dev secrets without committing them |
 | Secrets (deploy) | Vercel env vars | Built-in, per-environment |
 | Secrets scanning | gitleaks | Pre-commit hook + CI job |
-| Pre-commit | Husky + lint-staged | Wires lint/format/typecheck/gitleaks/DCO on staged files |
+| Pre-commit | Husky + lint-staged | Wires lint/format/typecheck/gitleaks on staged files |
 
 ### Tier 4 (KG) candidates
 
@@ -116,14 +116,11 @@ meet at the spec.
 
 ---
 
-## Pre-commit and DCO tooling
+## Pre-commit tooling
 
 - **Husky + lint-staged.** Format, lint, and typecheck staged files.
 - **gitleaks.** Scan staged content for secrets. Runs in both pre-commit
   and CI.
-- **DCO sign-off** enforced two ways: Husky `commit-msg` hook locally + a
-  GitHub Actions DCO check in CI. Mirrors the working agreement in
-  implementation.md.
 - **License-header check.** Lint script ensures every source file in the
   public repo carries the short Apache 2.0 header.
 - **`check-commercial-leakage.sh`.** Scans staged files for known
@@ -168,7 +165,7 @@ churning import paths. See [goals.md](./goals.md#npm-package-scopes).
 knowledge-graph-starter/
 ├── LICENSE                 # Apache 2.0
 ├── NOTICE                  # Required by Apache 2.0
-├── CONTRIBUTING.md         # DCO sign-off, PR process
+├── CONTRIBUTING.md         # contribution guide, PR process
 ├── CODE_OF_CONDUCT.md      # Contributor Covenant
 ├── apps/
 │   ├── web/                # Next.js frontend + Route Handlers

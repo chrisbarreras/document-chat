@@ -12,7 +12,6 @@
 ## Definition of Done
 
 - [ ] Code + tests + docs + green CI
-- [ ] DCO sign-off on every commit (`git commit -s`)
 - [ ] Apache 2.0 SPDX header on every new source file
 - [ ] If a public-vs-private decision: confirmed this PR is in the right repo
 - [ ] If a new dependency: justified in the PR body

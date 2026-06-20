@@ -4,12 +4,11 @@ Thanks for your interest. This is the public Apache 2.0 starter for a
 document Q&A system. We aren't actively soliciting contributions, but if
 you've got a fix or a feature, here's how to land it.
 
-## License and DCO
+## License
 
-All contributions are licensed under [Apache 2.0](./LICENSE). By submitting a
-contribution you assert the [Developer Certificate of Origin](https://developercertificate.org/).
-Sign each commit with `git commit -s`. The DCO check in CI will block
-unsigned commits.
+All contributions are licensed under [Apache 2.0](./LICENSE) — the same license
+as the project (inbound = outbound). Opening a PR means you agree your changes
+are provided under that license. No CLA or DCO sign-off is required.
 
 ## Conventional commits
 
@@ -35,11 +34,11 @@ commit (implementation). Squash-merge collapses the pair for `main`.
 ## Pull request workflow
 
 1. Create a feature branch
-2. Make changes — small, signed-off, conventional commits
+2. Make changes — small, conventional commits
 3. Open a PR with a filled-out test plan
-4. CI must be green before review (lint, typecheck, contract regen, vitest,
-   playwright, build, DCO)
-5. Squash-merge to `main`
+4. CI runs lint, typecheck, contract regen, vitest, playwright, build, and the
+   eval gate
+5. Green PRs auto-merge (squash) to `main` — no review required
 
 ## Local setup
 

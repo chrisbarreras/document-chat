@@ -84,7 +84,7 @@ packages/eval/            Golden Q&A loader, metrics, runner, fixtures
 supabase/                 Local dev config + SQL migrations
 docs/                     deploy.md + Architecture Decision Records (adr/)
 scripts/                  Repo tooling (license-header check, smoke probe)
-.github/workflows/        CI, DCO, gitleaks, eval, smoke
+.github/workflows/        CI, gitleaks, eval, smoke, auto-merge
 ```
 
 ## Common commands
@@ -130,8 +130,9 @@ E2E notes:
 
 ## Contributing
 
-Contributions require a DCO sign-off (`git commit -s`). See
-[CONTRIBUTING.md](./CONTRIBUTING.md).
+Open a PR — contributions are accepted under [Apache 2.0](./LICENSE) (inbound =
+outbound). CI runs lint, type-check, tests, and the eval gate; green PRs merge
+automatically. See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## License
 

@@ -102,9 +102,9 @@ We'd switch only if a concrete competitive threat appears.
 ### Contributor policy (public repo)
 
 - **CONTRIBUTING.md** explaining how to propose changes.
-- **DCO** (Developer Certificate of Origin) sign-off required for
-  contributions, so we retain the option to relicense or use contributions
-  in the commercial product. Lighter-weight than a full CLA; start there.
+- **Inbound = outbound licensing**: contributions are accepted under Apache 2.0
+  (no CLA or DCO sign-off). The starter isn't soliciting contributions, so the
+  lighter norm is sufficient; revisit if that changes.
 - **Code of Conduct** (standard Contributor Covenant).
 - **Issue templates + PR templates** matching our Definition-of-Done.
 - We're **not** soliciting contributions actively — the starter is a
@@ -118,7 +118,7 @@ We'd switch only if a concrete competitive threat appears.
 | Risk | Mitigation |
 |---|---|
 | Competitor forks the public starter into a competing SaaS | Accepted risk under Apache 2.0; commercial moat is in private Tiers 2–4 (lifecycle, KG, provenance). Re-evaluate license (BSL) only if a concrete threat appears |
-| Public contributions create licensing ambiguity | DCO sign-off enforced in CI; CONTRIBUTING.md is explicit about commercial use; reject contributions that don't sign off |
+| Public contributions create licensing ambiguity | Inbound = outbound under Apache 2.0 (CONTRIBUTING.md is explicit about commercial use); not actively soliciting contributions, so exposure is minimal |
 | Commercially-sensitive code accidentally pushed to public repo | Private features developed only in the private repo; pre-commit hook scans for known commercial package names; PR template checklist includes "is this in the right repo?" |
 | OSS support burden distracts from commercial work | Issue template sets expectations (no SLA, best-effort triage); cap triage time |
 | Vendor lock-in (Supabase, Vercel) | Business logic lives in `packages/`, not in framework-specific code; ADR before adopting any new vendor |

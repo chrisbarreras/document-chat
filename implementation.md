@@ -275,8 +275,8 @@ and serve as a learning scaffold.
   tickets with well-defined boundaries; senior reviews thoroughly.
 - **License headers** on every source file in the public repo (short Apache
   2.0 header). Lint enforces in CI.
-- **DCO sign-off** on every commit to the public repo (`git commit -s`).
-  Also enforced in CI.
+- **Inbound = outbound licensing.** Contributions are accepted under Apache 2.0
+  (no CLA or DCO sign-off). CONTRIBUTING.md states this.
 - **Public-first for non-differentiating work.** Default: bugfixes,
   infrastructure improvements, and general retrieval/eval quality go in the
   public repo unless there's a reason to keep them private. Commercial
