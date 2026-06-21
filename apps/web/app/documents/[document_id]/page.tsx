@@ -8,6 +8,7 @@ import { DocumentEditor } from './editor';
 import { IngestionPanel } from './ingestion-panel';
 import { IngestionBadge } from '../ingestion-badge';
 import { DocumentHistory } from './document-history';
+import { NewVersionUploader } from './new-version';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,8 +45,13 @@ export default async function DocumentDetailPage({
       </div>
 
       <section className="card">
-        <h2 className="card__title">Details</h2>
-        <dl className="kv">
+        <div className="row row--space-between">
+          <h2 className="card__title" style={{ margin: 0 }}>
+            Details
+          </h2>
+          <NewVersionUploader documentId={doc.id} title={doc.title} version={doc.version} />
+        </div>
+        <dl className="kv" style={{ marginTop: '0.75rem' }}>
           <dt>Version</dt>
           <dd>{doc.version}</dd>
           <dt>Effective date</dt>
