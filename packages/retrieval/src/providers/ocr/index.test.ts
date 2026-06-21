@@ -23,8 +23,8 @@ describe('getOcrProvider', () => {
     expect(getOcrProvider('disabled')).toBeNull();
   });
 
-  it('throws for the not-yet-implemented mistral provider', () => {
-    expect(() => getOcrProvider('mistral')).toThrow(/mistral/i);
+  it('selects the Mistral provider by name', () => {
+    expect(getOcrProvider('mistral')?.name).toBe('mistral');
   });
 
   it('throws for an unknown provider', () => {

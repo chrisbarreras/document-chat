@@ -140,17 +140,25 @@ sequenceDiagram
 whose pages are images — the extract step calls an OCR provider as a fallback,
 then continues to chunk → embed as usual.
 
-- **Default:** Claude vision (`claude-haiku-4-5`), which reuses your existing
-  `ANTHROPIC_API_KEY` — no new vendor or key to configure.
-- **Swappable:** set `OCR_PROVIDER` to choose the engine. `claude` (default),
-  or `none` to disable OCR (textless PDFs then fail fast with a clear reason).
-  The provider lives behind a small interface in
-  [`packages/retrieval/src/providers/ocr`](./packages/retrieval/src/providers/ocr),
-  so adding a cheaper per-page engine (e.g. Mistral OCR) later is a one-file
-  drop-in, not a pipeline change.
-- **Cost:** OCR only runs on the rare image-only upload. Claude vision is
-  pennies per document at that volume; a dedicated OCR API is cheaper per page
-  if you ever ingest scans at scale.
+Set `OCR_PROVIDER` to choose the engine (the providers live behind a small
+interface in
+[`packages/retrieval/src/providers/ocr`](./packages/retrieval/src/providers/ocr),
+so adding another is a one-file drop-in):
+
+- **`claude`** (default) — Claude vision (`claude-haiku-4-5`); reuses your
+  existing `ANTHROPIC_API_KEY`, so no new vendor. **Caveat:** Claude's output
+  content filter refuses to reproduce standardized boilerplate verbatim — e.g.
+  a state-mandated consumer-protection notice in a construction contract — and
+  returns "Output blocked by content filtering policy", failing that document.
+  Fine for most scans; a poor fit for contract/form corpora.
+- **`mistral`** — a dedicated OCR engine (`MISTRAL_API_KEY`). No LLM content
+  filter, so it transcribes standardized/boilerplate text too, and it's cheaper
+  per page. **Recommended when your corpus is contracts, forms, or other
+  documents full of mandated boilerplate.**
+- **`none`** — disable OCR; textless PDFs fail fast with a clear reason.
+
+**Cost:** OCR only runs on the rare image-only upload. At that volume both
+engines cost cents; Mistral is the cheaper per-page option at scale.
 
 ### How a question is answered — RAG + citations
 
