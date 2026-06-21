@@ -36,6 +36,16 @@ describe('extractPdfPages', () => {
     expect(result.pages).toHaveLength(1);
     expect(result.pages[0]).toContain('Hello World');
   });
+
+  it('does not detach the caller buffer (the OCR fallback reuses these bytes)', async () => {
+    // Regression: pdf.js transfers/detaches the input ArrayBuffer during parse.
+    // When extraction detached the caller's buffer, the OCR fallback then sent
+    // an empty PDF → "PDF cannot be empty". extractPdfPages must leave the
+    // input intact. (Use a fresh copy so other tests keep their bytes.)
+    const bytes = HELLO_PDF.slice();
+    await extractPdfPages(bytes);
+    expect(bytes.length).toBe(HELLO_PDF.length); // would be 0 if detached
+  });
 });
 
 describe('runExtraction', () => {
