@@ -13,25 +13,26 @@ export { claudeOcrProvider, DEFAULT_OCR_MODEL } from './claude';
 export { mistralOcrProvider, DEFAULT_MISTRAL_OCR_MODEL } from './mistral';
 
 /**
- * Resolve the OCR provider named by `OCR_PROVIDER` (default `claude`).
+ * Resolve the OCR provider named by `OCR_PROVIDER` (default `mistral`).
  * Returns `null` when OCR is disabled (`none`/`off`/`disabled`), in which case
  * a textless PDF fails with a clear error instead of being OCR'd.
  *
- * - `claude`  — reuses `ANTHROPIC_API_KEY`; no new vendor, but its output
+ * - `mistral` (default) — dedicated OCR engine (`MISTRAL_API_KEY`); no LLM
+ *   content filter, transcribes standardized boilerplate, cheaper per page.
+ *   Best fit for document/contract corpora.
+ * - `claude`  — reuses `ANTHROPIC_API_KEY` (no new vendor), but its output
  *   content filter blocks verbatim reproduction of standardized text
- *   (e.g. boilerplate legal notices common in contracts).
- * - `mistral` — dedicated OCR engine (`MISTRAL_API_KEY`); no such filter and
- *   cheaper per page. Recommended for document/contract corpora.
+ *   (e.g. mandated legal notices common in contracts), failing those docs.
  */
 export function getOcrProvider(name = process.env.OCR_PROVIDER): OcrProvider | null {
-  switch ((name ?? 'claude').toLowerCase()) {
+  switch ((name ?? 'mistral').toLowerCase()) {
     case 'none':
     case 'off':
     case 'disabled':
       return null;
-    case '':
     case 'claude':
       return claudeOcrProvider;
+    case '':
     case 'mistral':
       return mistralOcrProvider;
     default:

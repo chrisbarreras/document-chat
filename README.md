@@ -36,11 +36,12 @@ You need API keys for both providers (small monthly caps recommended):
 
 - `OPENAI_API_KEY` — embeddings (text-embedding-3-small). Used at ingestion
   and at retrieval time. Without it, uploads stay in `failed`.
-- `ANTHROPIC_API_KEY` — chat completion (Claude), and the default OCR fallback
-  for scanned PDFs. Without it, the streaming chat endpoint returns 503.
-
-OCR is optional to configure: `OCR_PROVIDER` defaults to `claude` (reuses the
-key above). See [Scanned PDFs / OCR](#scanned-pdfs--ocr).
+- `ANTHROPIC_API_KEY` — chat completion (Claude). Without it, the streaming
+  chat endpoint returns 503.
+- `MISTRAL_API_KEY` — OCR for scanned/image PDFs (the default OCR engine). Only
+  needed if you upload PDFs with no embedded text; set `OCR_PROVIDER=claude` to
+  reuse the Anthropic key instead, or `OCR_PROVIDER=none` to disable. See
+  [Scanned PDFs / OCR](#scanned-pdfs--ocr).
 
 Supabase values come from `pnpm db:start` output. See
 [`.env.example`](./.env.example) for the full matrix.
@@ -102,7 +103,7 @@ flowchart TB
 The browser uploads straight to storage via a signed URL (bypassing serverless
 body limits); a durable Inngest pipeline then extracts, chunks, and embeds the
 document, streaming live status to the UI. Scanned or photocopied PDFs that
-carry no embedded text fall back to OCR (Claude vision by default; see
+carry no embedded text fall back to OCR (Mistral OCR by default; see
 [Scanned PDFs / OCR](#scanned-pdfs--ocr)) so an image-only document still
 becomes searchable instead of dead-ending.
 
@@ -114,7 +115,7 @@ sequenceDiagram
   participant DB as Postgres + pgvector
   participant IN as Inngest
   participant OA as OpenAI
-  participant CL as Anthropic Claude
+  participant OCRP as OCR (Mistral)
 
   U->>API: request upload URL
   API-->>U: signed URL
@@ -125,8 +126,8 @@ sequenceDiagram
   IN->>ST: download PDF
   IN->>IN: extract text (unpdf)
   opt no embedded text (scanned / image PDF)
-    IN->>CL: OCR pages (Claude vision)
-    CL-->>IN: transcribed text
+    IN->>OCRP: OCR pages
+    OCRP-->>IN: transcribed text
   end
   IN->>IN: chunk
   IN->>OA: embed chunks
@@ -145,16 +146,16 @@ interface in
 [`packages/retrieval/src/providers/ocr`](./packages/retrieval/src/providers/ocr),
 so adding another is a one-file drop-in):
 
-- **`claude`** (default) — Claude vision (`claude-haiku-4-5`); reuses your
-  existing `ANTHROPIC_API_KEY`, so no new vendor. **Caveat:** Claude's output
-  content filter refuses to reproduce standardized boilerplate verbatim — e.g.
-  a state-mandated consumer-protection notice in a construction contract — and
+- **`mistral`** (default) — a dedicated OCR engine; set `MISTRAL_API_KEY`. No
+  LLM content filter, so it transcribes standardized/boilerplate text (the kind
+  contracts and forms are full of), and it's cheaper per page. The right default
+  for a document corpus.
+- **`claude`** — Claude vision (`claude-haiku-4-5`); reuses your existing
+  `ANTHROPIC_API_KEY`, so no new vendor. **Caveat:** Claude's output content
+  filter refuses to reproduce standardized boilerplate verbatim — e.g. a
+  state-mandated consumer-protection notice in a construction contract — and
   returns "Output blocked by content filtering policy", failing that document.
-  Fine for most scans; a poor fit for contract/form corpora.
-- **`mistral`** — a dedicated OCR engine (`MISTRAL_API_KEY`). No LLM content
-  filter, so it transcribes standardized/boilerplate text too, and it's cheaper
-  per page. **Recommended when your corpus is contracts, forms, or other
-  documents full of mandated boilerplate.**
+  Fine for ad-hoc scans; a poor fit for contract/form corpora.
 - **`none`** — disable OCR; textless PDFs fail fast with a clear reason.
 
 **Cost:** OCR only runs on the rare image-only upload. At that volume both
