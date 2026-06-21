@@ -50,9 +50,17 @@ describe('UploadForm', () => {
     // fire submit on the form directly (also gives onSubmit a real currentTarget).
     fireEvent.submit(container.querySelector('form') as HTMLFormElement);
 
-    expect(await screen.findByText(/Uploaded\. Processing/i)).toBeTruthy();
+    // Success now shows a live ingestion badge (starts at "pending" and then
+    // advances via SSE) instead of a static message.
+    const badge = await screen.findByTestId('ingestion-state');
+    expect(badge.textContent).toBe('pending');
     expect(screen.queryByRole('alert')).toBeNull(); // no error box
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    // The three upload steps fired (sign → PUT → finalize); the badge may also
+    // open an ingestion-events stream, so assert the steps rather than a count.
+    const urls = fetchMock.mock.calls.map((c) => String(c[0]));
+    expect(urls.filter((u) => u.endsWith('/api/documents/uploads')).length).toBe(1);
+    expect(urls.filter((u) => u === 'http://localhost/sign').length).toBe(1);
+    expect(urls.filter((u) => u.endsWith('/api/documents')).length).toBe(1);
     expect(refresh).toHaveBeenCalled();
   });
 });

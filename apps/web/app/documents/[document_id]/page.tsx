@@ -6,6 +6,7 @@ import { getDocumentRow } from '../../../lib/documents-store';
 import { AppShell } from '../../app-shell';
 import { DocumentEditor } from './editor';
 import { IngestionPanel } from './ingestion-panel';
+import { IngestionBadge } from '../ingestion-badge';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +29,7 @@ export default async function DocumentDetailPage({
           <h1>{doc.title}</h1>
           <p>
             <span className={`badge badge--${doc.status}`}>{doc.status}</span>{' '}
-            <span className={`badge badge--${doc.ingestion_state}`}>{doc.ingestion_state}</span>
+            <IngestionBadge documentId={doc.id} initialState={doc.ingestion_state} />
           </p>
         </div>
         <Link href="/documents" className="btn btn--ghost btn--sm">

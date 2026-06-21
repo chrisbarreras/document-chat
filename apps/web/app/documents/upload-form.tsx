@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { IngestionBadge } from './ingestion-badge';
 
 type Phase = 'idle' | 'requesting' | 'uploading' | 'finalizing' | 'done' | 'error';
 
@@ -29,6 +30,7 @@ export function UploadForm() {
   const [title, setTitle] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [uploadedId, setUploadedId] = useState<string | null>(null);
 
   const busy = phase === 'requesting' || phase === 'uploading' || phase === 'finalizing';
 
@@ -76,7 +78,9 @@ export function UploadForm() {
         body: JSON.stringify({ upload_id, title: title.trim() || file.name }),
       });
       if (!finalizeRes.ok) throw new Error(await readDetail(finalizeRes, 'Could not finalize the document.'));
+      const created = (await finalizeRes.json().catch(() => ({}))) as { id?: string };
 
+      setUploadedId(created.id ?? null);
       setPhase('done');
       setFile(null);
       setTitle('');
@@ -118,7 +122,12 @@ export function UploadForm() {
           </button>
           {phase === 'done' ? (
             <span role="status" className="form-status form-status--success">
-              Uploaded. Processing will begin shortly.
+              Uploaded —{' '}
+              {uploadedId ? (
+                <IngestionBadge documentId={uploadedId} initialState="pending" showError />
+              ) : (
+                'processing will begin shortly.'
+              )}
             </span>
           ) : null}
         </div>
