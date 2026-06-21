@@ -7,6 +7,7 @@ import { AppShell } from '../../app-shell';
 import { DocumentEditor } from './editor';
 import { IngestionPanel } from './ingestion-panel';
 import { IngestionBadge } from '../ingestion-badge';
+import { DocumentHistory } from './document-history';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,6 +66,8 @@ export default async function DocumentDetailPage({
         initialState={doc.ingestion_state}
         initialError={doc.ingestion_error}
       />
+
+      <DocumentHistory documentId={doc.id} uploadedAt={doc.created_at} />
 
       <DocumentEditor
         doc={{
