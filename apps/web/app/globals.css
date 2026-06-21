@@ -1032,3 +1032,125 @@ details summary:hover {
   color: var(--color-text-subtle);
   font-size: 0.8125rem;
 }
+
+/* -----------------------------------------------------------------------
+ * Home — hero, how-it-works, feature/dashboard grids
+ * ----------------------------------------------------------------------- */
+.hero {
+  text-align: center;
+  max-width: 46rem;
+  margin: 1.5rem auto 2.5rem;
+}
+
+.hero__eyebrow {
+  display: inline-block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-subtle);
+  margin-bottom: 0.75rem;
+}
+
+.hero__title {
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  line-height: 1.1;
+  margin: 0 0 0.75rem;
+}
+
+.hero__lead {
+  font-size: 1.0625rem;
+  color: var(--color-text-muted);
+  margin: 0 auto 1.5rem;
+  max-width: 38rem;
+}
+
+.hero__actions {
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.section-heading {
+  font-size: 1.25rem;
+  margin: 0 0 1rem;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem;
+}
+
+.card-grid--two {
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+}
+
+.card-grid .card {
+  margin-top: 0; /* grid gap handles spacing; override .card + .card */
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem;
+  counter-reset: step;
+}
+
+.steps__item {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  padding: 1.25rem;
+}
+
+.steps__item h3 {
+  margin: 0.5rem 0 0.25rem;
+}
+
+.steps__item p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+}
+
+.steps__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--color-accent, #2563eb);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.recent-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.recent-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.recent-list__item:first-child {
+  border-top: none;
+}
+
+.recent-list__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
