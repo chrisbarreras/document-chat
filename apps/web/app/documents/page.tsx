@@ -6,6 +6,7 @@ import { listDocuments } from '../../lib/documents-store';
 import { DEFAULT_PAGE_LIMIT } from '../../lib/documents';
 import { AppShell } from '../app-shell';
 import { UploadForm } from './upload-form';
+import { IngestionBadge } from './ingestion-badge';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,9 +60,7 @@ export default async function DocumentsPage({
                     <span className={`badge badge--${doc.status}`}>{doc.status}</span>
                   </td>
                   <td>
-                    <span className={`badge badge--${doc.ingestion_state}`}>
-                      {doc.ingestion_state}
-                    </span>
+                    <IngestionBadge documentId={doc.id} initialState={doc.ingestion_state} />
                   </td>
                   <td className="subtle">{new Date(doc.created_at).toLocaleString()}</td>
                 </tr>
