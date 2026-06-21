@@ -12,6 +12,19 @@ top of it.
 > link each claim to the chunk it came from. Every PR is scored against a
 > golden Q&A set and gated on REQ-1.5.3's citation-precision threshold.
 
+### Highlights
+
+- **Upload** PDFs by drag-and-drop or multi-select — each file ingests
+  independently with a live status badge.
+- **Scanned / image PDFs** are OCR'd automatically (Mistral by default; see
+  [Scanned PDFs / OCR](#scanned-pdfs--ocr)) so a photocopy still becomes
+  searchable.
+- **Ask** questions and get streamed, **Markdown-formatted** answers whose
+  citation chips link back to the exact source chunk.
+- **Conversation memory** — follow-ups in a chat see the earlier turns.
+- **Document tools** — download the original PDF, browse a full ingestion
+  **history** (with a verbose mode), reprocess, and upload a **new version**.
+
 ## Quick start
 
 Prerequisites: **Node 20** (`.nvmrc`), **pnpm 9** (`corepack enable pnpm`),
@@ -32,7 +45,7 @@ start a chat. Full demo walkthrough:
 
 ### Minimum environment
 
-You need API keys for both providers (small monthly caps recommended):
+You need API keys for these providers (small monthly caps recommended):
 
 - `OPENAI_API_KEY` — embeddings (text-embedding-3-small). Used at ingestion
   and at retrieval time. Without it, uploads stay in `failed`.
@@ -164,7 +177,8 @@ engines cost cents; Mistral is the cheaper per-page option at scale.
 ### How a question is answered — RAG + citations
 
 The query is embedded and matched against the document vectors; the most
-relevant chunks are handed to Claude, which streams an answer whose citations
+relevant chunks (plus the chat's earlier turns, for follow-up context) are
+handed to Claude, which streams a Markdown-formatted answer whose citations
 point back to specific source chunks.
 
 ```mermaid
