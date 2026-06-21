@@ -7,11 +7,11 @@ describe('getOcrProvider', () => {
     expect(getOcrProvider('claude')?.name).toBe('claude');
   });
 
-  it('defaults to Claude when OCR_PROVIDER is unset', () => {
+  it('defaults to Mistral when OCR_PROVIDER is unset', () => {
     const prev = process.env.OCR_PROVIDER;
     delete process.env.OCR_PROVIDER;
     try {
-      expect(getOcrProvider()?.name).toBe('claude');
+      expect(getOcrProvider()?.name).toBe('mistral');
     } finally {
       if (prev !== undefined) process.env.OCR_PROVIDER = prev;
     }
