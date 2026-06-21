@@ -61,6 +61,38 @@ describe('streamAnthropicChat', () => {
     expect((events[3] as Extract<AnthropicStreamEvent, { type: 'stop' }>).finish_reason).toBe('stop');
   });
 
+  it('defaults max_tokens to 4096 and honors options.maxTokens + CHAT_MAX_TOKENS', async () => {
+    let captured: { max_tokens?: number } = {};
+    const fetchImpl = vi.fn(async (_url: string | URL, init?: RequestInit) => {
+      captured = JSON.parse(init!.body as string);
+      return sseBody(happyFrames);
+    });
+    const run = (opts: Record<string, unknown>) =>
+      collect(
+        streamAnthropicChat('s', [{ role: 'user', content: 'hi' }], {
+          apiKey: 'sk',
+          fetch: fetchImpl as unknown as typeof fetch,
+          ...opts,
+        }),
+      );
+
+    await run({});
+    expect(captured.max_tokens).toBe(4096); // generous default (streamed, no timeout risk)
+
+    await run({ maxTokens: 512 });
+    expect(captured.max_tokens).toBe(512); // explicit option wins
+
+    const prev = process.env.CHAT_MAX_TOKENS;
+    process.env.CHAT_MAX_TOKENS = '8000';
+    try {
+      await run({});
+      expect(captured.max_tokens).toBe(8000); // env override
+    } finally {
+      if (prev === undefined) delete process.env.CHAT_MAX_TOKENS;
+      else process.env.CHAT_MAX_TOKENS = prev;
+    }
+  });
+
   it('maps max_tokens stop_reason to finish_reason length', async () => {
     const frames = [
       ...happyFrames.slice(0, 3),

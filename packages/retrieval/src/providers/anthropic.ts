@@ -12,8 +12,12 @@
 /** Default model. architecture.md picks Claude as the primary chat LLM. */
 export const DEFAULT_CHAT_MODEL = 'claude-opus-4-7';
 
-/** Max output tokens for a single chat turn. Conservative Tier 1 default. */
-export const DEFAULT_MAX_TOKENS = 1024;
+/**
+ * Max output tokens for a single chat turn. Replies stream, so a generous cap
+ * carries no HTTP-timeout risk — 1024 truncated longer multi-document answers
+ * mid-sentence. Override per-deployment with `CHAT_MAX_TOKENS`.
+ */
+export const DEFAULT_MAX_TOKENS = 4096;
 
 /** Normalized stream event. The chat route handler maps each to an SSE frame. */
 export type AnthropicStreamEvent =
@@ -95,7 +99,9 @@ export async function* streamAnthropicChat(
   }
   const fetchImpl = options.fetch ?? globalThis.fetch;
   const model = options.model ?? DEFAULT_CHAT_MODEL;
-  const maxTokens = options.maxTokens ?? DEFAULT_MAX_TOKENS;
+  const envMax = Number(process.env.CHAT_MAX_TOKENS);
+  const maxTokens =
+    options.maxTokens ?? (Number.isInteger(envMax) && envMax > 0 ? envMax : DEFAULT_MAX_TOKENS);
 
   const body: Record<string, unknown> = {
     model,
