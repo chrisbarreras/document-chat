@@ -60,6 +60,13 @@ export interface OrchestrateOptions {
   userMessage: string;
   topK: number;
   model: string;
+  /**
+   * Prior conversation turns (oldest first), giving the model memory of the
+   * chat so far. Must start with a `user` turn and alternate (the API tolerates
+   * consecutive same-role turns by merging them). Citation markers should be
+   * stripped before passing them here. Defaults to none (single-turn).
+   */
+  history?: Array<{ role: 'user' | 'assistant'; content: string }>;
 }
 
 /**
@@ -155,8 +162,8 @@ export async function* runChatTurn(
     yield { event: 'citation', data: { message_id: messageId, citation: rowToCitation(row) } };
   }
 
-  // Stream the LLM reply. Tier 1 sends a single user turn; chat history
-  // arrives with conversation memory (later chunk).
+  // Stream the LLM reply. Prior turns (if any) give the model conversation
+  // memory; the current user message is always the final turn.
   const system = buildSystemPrompt(rows);
   let content = '';
   let tokenIndex = 0;
@@ -165,6 +172,7 @@ export async function* runChatTurn(
   let finishReason: 'stop' | 'length' | 'content_filter' | 'error' = 'stop';
 
   for await (const event of deps.stream(system, [
+    ...(options.history ?? []),
     { role: 'user', content: options.userMessage },
   ])) {
     switch (event.type) {

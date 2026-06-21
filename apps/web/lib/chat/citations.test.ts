@@ -1,10 +1,22 @@
 // SPDX-License-Identifier: Apache-2.0
 import { describe, it, expect } from 'vitest';
-import { extractCitations } from './citations';
+import { extractCitations, stripCitationMarkers } from './citations';
 
 const A = '11111111-1111-1111-1111-111111111111';
 const B = '22222222-2222-2222-2222-222222222222';
 const C = '33333333-3333-3333-3333-333333333333';
+
+describe('stripCitationMarkers', () => {
+  it('removes all markers and collapses the doubled spaces they leave', () => {
+    expect(stripCitationMarkers(`Asphalt cures in 24h [${A}] before sealing [${B}].`)).toBe(
+      'Asphalt cures in 24h before sealing.',
+    );
+  });
+
+  it('leaves marker-free prose untouched', () => {
+    expect(stripCitationMarkers('No markers here.')).toBe('No markers here.');
+  });
+});
 
 describe('extractCitations', () => {
   it('returns the content unchanged when there are no markers', () => {

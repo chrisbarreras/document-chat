@@ -157,6 +157,24 @@ export async function listChatMessages(
   return { items, nextCursor };
 }
 
+/**
+ * Load the most recent `limit` messages in a chat, returned oldest-first, for
+ * use as LLM conversation context. RLS-scoped. Unlike {@link listChatMessages}
+ * (offset pagination from the start), this takes the tail of the conversation.
+ */
+export async function listRecentChatMessages(chatId: string, limit: number): Promise<MessageRow[]> {
+  const supabase = await createSSRClient();
+  const { data, error } = await supabase
+    .from('messages')
+    .select(MESSAGE_COLUMNS)
+    .eq('chat_id', chatId)
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(limit);
+  if (error || !data) return [];
+  return (data as unknown as MessageRow[]).reverse();
+}
+
 export interface NewMessage {
   chatId: string;
   role: MessageRole;

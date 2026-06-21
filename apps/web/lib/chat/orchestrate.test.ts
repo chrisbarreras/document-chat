@@ -155,6 +155,28 @@ describe('runChatTurn', () => {
       { role: 'user', content: 'what is X?' },
     ]);
   });
+
+  it('prepends prior conversation history before the current user turn', async () => {
+    const deps = makeDeps();
+    const history = [
+      { role: 'user' as const, content: 'first question' },
+      { role: 'assistant' as const, content: 'first answer' },
+    ];
+    await collect(
+      runChatTurn(deps, {
+        chatId: CHAT_ID,
+        userMessage: 'follow-up',
+        topK: 4,
+        model: 'm',
+        history,
+      }),
+    );
+    expect(deps.stream).toHaveBeenCalledWith(expect.any(String), [
+      { role: 'user', content: 'first question' },
+      { role: 'assistant', content: 'first answer' },
+      { role: 'user', content: 'follow-up' },
+    ]);
+  });
 });
 
 describe('buildSystemPrompt', () => {
