@@ -64,9 +64,15 @@ export interface ExtractionDeps {
 /**
  * Extract text from a freshly uploaded PDF via unpdf. Splits per-page so the
  * downstream chunker can attribute chunks to pages without re-paginating.
+ *
+ * Pass unpdf a *copy* of the bytes: pdf.js transfers (detaches) the input
+ * ArrayBuffer during parsing, which would leave the caller's `pdf` empty. The
+ * OCR fallback reuses the same buffer afterwards, so detaching it here sent an
+ * empty PDF to the OCR provider ("PDF cannot be empty"). The slice keeps the
+ * caller's bytes intact.
  */
 export async function extractPdfPages(pdf: Uint8Array): Promise<ExtractionResult> {
-  const proxy = await getDocumentProxy(pdf);
+  const proxy = await getDocumentProxy(pdf.slice());
   const { text, totalPages } = await extractText(proxy, { mergePages: false });
   // `mergePages: false` always returns string[]; the union in unpdf's d.ts is
   // for the alternative overload.
