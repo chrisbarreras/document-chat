@@ -12,7 +12,7 @@
 // large intermediate values (per-page text, chunk records) live inside the
 // step memo, not in events.
 import { NonRetriableError } from 'inngest';
-import { embedTexts } from '@document-chat/retrieval';
+import { embedTexts, getOcrProvider } from '@document-chat/retrieval';
 import { inngest, EVENT_DOCUMENT_UPLOADED, type DocumentUploadedData } from '../client';
 import {
   downloadDocumentObject,
@@ -32,12 +32,20 @@ export const extractDocumentFunction = inngest.createFunction(
   async ({ event, step }) => {
     const data = event.data as DocumentUploadedData;
 
+    // Resolve the OCR fallback engine once per run (env-selected; `null` when
+    // OCR is disabled). Reading it here surfaces a misconfigured OCR_PROVIDER
+    // loudly at the start of the run rather than mid-step.
+    const ocrProvider = getOcrProvider();
+
     const extraction = await step.run('extract', async () => {
       try {
         return await runExtraction(
           {
             download: downloadDocumentObject,
             extract: extractPdfPages,
+            // Omit the key entirely (not `undefined`) when OCR is disabled —
+            // `exactOptionalPropertyTypes` distinguishes the two.
+            ...(ocrProvider ? { ocr: (pdf: Uint8Array) => ocrProvider.ocrPdf(pdf) } : {}),
             transition: recordIngestionTransition,
           },
           data,

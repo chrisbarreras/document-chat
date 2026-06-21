@@ -19,11 +19,12 @@ export interface ExtractionResult {
 }
 
 /**
- * Thrown when a PDF yields no extractable text — almost always a scanned /
- * photocopied document whose pages are images. We don't OCR in Tier 1, so this
- * is a terminal, deterministic failure: the Inngest wrapper converts it to a
- * NonRetriableError so the pipeline fails fast with a clear reason instead of
- * retrying and producing a chunk-less, unsearchable "ready" document.
+ * Thrown when a document cannot be turned into indexable text: a PDF with no
+ * embedded text (scanned/photocopied images) AND either OCR is disabled or the
+ * OCR fallback also produced nothing. Terminal and deterministic — the Inngest
+ * wrapper converts it to a NonRetriableError so the pipeline fails fast with a
+ * clear reason instead of retrying and producing a chunk-less, unsearchable
+ * "ready" document.
  */
 export class NoExtractableTextError extends Error {
   constructor(message: string) {
@@ -46,6 +47,13 @@ export interface TransitionOptions {
 export interface ExtractionDeps {
   download: (objectKey: string) => Promise<Uint8Array>;
   extract: (pdf: Uint8Array) => Promise<ExtractionResult>;
+  /**
+   * Optional OCR fallback for scanned/image PDFs. Invoked only when `extract`
+   * yields no embedded text. Returns transcribed per-page text. When omitted
+   * (OCR disabled via `OCR_PROVIDER=none`), a textless PDF fails loud with
+   * {@link NoExtractableTextError} instead.
+   */
+  ocr?: (pdf: Uint8Array) => Promise<{ pages: string[] }>;
   transition: (
     documentId: string,
     toState: IngestionState,
@@ -73,8 +81,10 @@ export async function extractPdfPages(pdf: Uint8Array): Promise<ExtractionResult
  * Behavior:
  *   1. Mark the row `extracting` (clears any prior ingestion_error).
  *   2. Download the storage object and extract text + page count.
- *   3. Mark the row `chunking` with `page_count` persisted.
- *   4. On any thrown error: mark the row `failed` with `ingestion_error`
+ *   3. If no embedded text, fall back to OCR (when configured); a scanned PDF
+ *      thus still becomes searchable instead of dead-ending.
+ *   4. Mark the row `chunking` with `page_count` persisted.
+ *   5. On any thrown error: mark the row `failed` with `ingestion_error`
  *      set to the error message, then rethrow so Inngest records the
  *      failure and applies the configured retry policy.
  */
@@ -87,14 +97,31 @@ export async function runExtraction(
     await deps.transition(document_id, 'extracting', { ingestionError: null });
     const pdf = await deps.download(storage_object_key);
     const result = await deps.extract(pdf);
-    if (!result.pages.some((page) => page.trim().length > 0)) {
-      throw new NoExtractableTextError(
-        'No extractable text found. This PDF appears to be scanned images; ' +
-          'OCR is not supported, so it cannot be indexed.',
-      );
+    let { pages } = result;
+    // unpdf reports the true page count even for image-only PDFs; keep it.
+    let { pageCount } = result;
+
+    if (!pages.some((page) => page.trim().length > 0)) {
+      // No embedded text — a scanned/image PDF. OCR it if a provider is wired.
+      if (!deps.ocr) {
+        throw new NoExtractableTextError(
+          'No extractable text found and OCR is disabled. This PDF appears to ' +
+            'be scanned images; enable OCR (OCR_PROVIDER) or upload a ' +
+            'text-based PDF.',
+        );
+      }
+      const ocr = await deps.ocr(pdf);
+      pages = ocr.pages;
+      if (!pageCount) pageCount = ocr.pages.length;
+      if (!pages.some((page) => page.trim().length > 0)) {
+        throw new NoExtractableTextError(
+          'OCR produced no text for this PDF; it cannot be indexed.',
+        );
+      }
     }
-    await deps.transition(document_id, 'chunking', { pageCount: result.pageCount });
-    return result;
+
+    await deps.transition(document_id, 'chunking', { pageCount });
+    return { pages, pageCount };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await deps.transition(document_id, 'failed', { ingestionError: message });

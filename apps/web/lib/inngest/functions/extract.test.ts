@@ -75,7 +75,8 @@ describe('runExtraction', () => {
     });
   });
 
-  it('fails loud with NoExtractableTextError when the PDF has no text (scanned/image)', async () => {
+  it('fails loud with NoExtractableTextError when the PDF has no text and OCR is disabled', async () => {
+    // No `ocr` dep wired ⇒ OCR disabled (OCR_PROVIDER=none).
     const deps = makeDeps({
       extract: vi.fn().mockResolvedValue({ pages: ['  ', '\n\t'], pageCount: 2 }),
     });
@@ -88,5 +89,56 @@ describe('runExtraction', () => {
       'failed',
       expect.objectContaining({ ingestionError: expect.stringMatching(/no extractable text/i) }),
     );
+  });
+
+  it('falls back to OCR when the PDF has no embedded text (scanned/image)', async () => {
+    const ocr = vi.fn().mockResolvedValue({ pages: ['Scanned page one', 'Scanned page two'] });
+    const deps = makeDeps({
+      extract: vi.fn().mockResolvedValue({ pages: ['', '  '], pageCount: 2 }),
+      ocr,
+    });
+
+    const result = await runExtraction(deps, event);
+
+    expect(ocr).toHaveBeenCalledTimes(1);
+    expect(result.pages).toEqual(['Scanned page one', 'Scanned page two']);
+    // Keeps unpdf's true page count, not the OCR segment count.
+    expect(result.pageCount).toBe(2);
+    expect(deps.transition).toHaveBeenNthCalledWith(2, DOCUMENT_ID, 'chunking', { pageCount: 2 });
+  });
+
+  it('does not call OCR when the PDF already has embedded text', async () => {
+    const ocr = vi.fn();
+    const deps = makeDeps({ ocr });
+
+    await runExtraction(deps, event);
+
+    expect(ocr).not.toHaveBeenCalled();
+  });
+
+  it('fails with NoExtractableTextError when OCR also yields no text', async () => {
+    const deps = makeDeps({
+      extract: vi.fn().mockResolvedValue({ pages: [''], pageCount: 1 }),
+      ocr: vi.fn().mockResolvedValue({ pages: ['', '  '] }),
+    });
+
+    await expect(runExtraction(deps, event)).rejects.toBeInstanceOf(NoExtractableTextError);
+    expect(deps.transition).toHaveBeenLastCalledWith(
+      DOCUMENT_ID,
+      'failed',
+      expect.objectContaining({ ingestionError: expect.stringMatching(/OCR produced no text/i) }),
+    );
+  });
+
+  it('marks failed and rethrows when the OCR provider errors', async () => {
+    const deps = makeDeps({
+      extract: vi.fn().mockResolvedValue({ pages: [''], pageCount: 1 }),
+      ocr: vi.fn().mockRejectedValue(new Error('claude OCR failed: 529 overloaded')),
+    });
+
+    await expect(runExtraction(deps, event)).rejects.toThrow(/overloaded/);
+    expect(deps.transition).toHaveBeenLastCalledWith(DOCUMENT_ID, 'failed', {
+      ingestionError: 'claude OCR failed: 529 overloaded',
+    });
   });
 });

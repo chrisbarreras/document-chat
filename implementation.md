@@ -100,7 +100,9 @@ harness. This is the public/Upwork portfolio piece.
 - Auth: signup / login via Supabase Auth.
 - Workspaces: single workspace per user in v1 (explicit non-goal: multi-tenant).
 - Document upload (PDF first; .docx, .md as stretch).
-- Async ingestion via Inngest: extract → chunk → embed → store.
+- Async ingestion via Inngest: extract → chunk → embed → store. Scanned/image
+  PDFs (no embedded text) fall back to OCR (Claude vision by default,
+  `OCR_PROVIDER`-swappable) before chunking.
 - Document metadata: `title`, `version`, `status` (draft / current / retired),
   `effective_date`.
 - Chat: streaming responses, conversation history.

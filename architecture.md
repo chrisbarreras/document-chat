@@ -50,6 +50,7 @@ meet at the spec.
 | Storage | Supabase Storage | Per-env bucket, RLS, signed upload URLs (see Storage section) |
 | Migrations | drizzle-kit (schema) + Supabase CLI (RLS policies) | Schema in Drizzle; auth/RLS SQL in Supabase migrations |
 | PDF extraction | unpdf (primary), pdf-parse (fallback) | unpdf is serverless-safe; pdf-parse covers malformed files |
+| OCR (scanned PDFs) | Claude vision (default), swappable via `OCR_PROVIDER` | Runs only when a PDF has no embedded text; reuses the Anthropic key. Behind an `OcrProvider` interface in `packages/retrieval` so a per-page engine (e.g. Mistral OCR) is a drop-in swap |
 | Email (transactional) | Resend | Pairs with Supabase Auth for verification/reset email |
 | LLM (primary) | Anthropic Claude | Best citation behavior in our use case |
 | LLM (secondary) | OpenAI | For comparison, fallback, and keyword breadth |

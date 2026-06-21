@@ -36,8 +36,11 @@ You need API keys for both providers (small monthly caps recommended):
 
 - `OPENAI_API_KEY` — embeddings (text-embedding-3-small). Used at ingestion
   and at retrieval time. Without it, uploads stay in `failed`.
-- `ANTHROPIC_API_KEY` — chat completion (Claude). Without it, the streaming
-  chat endpoint returns 503.
+- `ANTHROPIC_API_KEY` — chat completion (Claude), and the default OCR fallback
+  for scanned PDFs. Without it, the streaming chat endpoint returns 503.
+
+OCR is optional to configure: `OCR_PROVIDER` defaults to `claude` (reuses the
+key above). See [Scanned PDFs / OCR](#scanned-pdfs--ocr).
 
 Supabase values come from `pnpm db:start` output. See
 [`.env.example`](./.env.example) for the full matrix.
@@ -98,7 +101,10 @@ flowchart TB
 
 The browser uploads straight to storage via a signed URL (bypassing serverless
 body limits); a durable Inngest pipeline then extracts, chunks, and embeds the
-document, streaming live status to the UI.
+document, streaming live status to the UI. Scanned or photocopied PDFs that
+carry no embedded text fall back to OCR (Claude vision by default; see
+[Scanned PDFs / OCR](#scanned-pdfs--ocr)) so an image-only document still
+becomes searchable instead of dead-ending.
 
 ```mermaid
 sequenceDiagram
@@ -108,6 +114,7 @@ sequenceDiagram
   participant DB as Postgres + pgvector
   participant IN as Inngest
   participant OA as OpenAI
+  participant CL as Anthropic Claude
 
   U->>API: request upload URL
   API-->>U: signed URL
@@ -116,11 +123,34 @@ sequenceDiagram
   API->>DB: create document (pending)
   API->>IN: emit document.uploaded
   IN->>ST: download PDF
-  IN->>IN: extract text → chunk
+  IN->>IN: extract text (unpdf)
+  opt no embedded text (scanned / image PDF)
+    IN->>CL: OCR pages (Claude vision)
+    CL-->>IN: transcribed text
+  end
+  IN->>IN: chunk
   IN->>OA: embed chunks
   IN->>DB: store chunks + vectors → mark ready
   Note over U,DB: UI streams pending → extracting → chunking → embedding → ready (SSE)
 ```
+
+#### Scanned PDFs / OCR
+
+`unpdf` extracts embedded text. When a PDF yields none — a scan or photocopy
+whose pages are images — the extract step calls an OCR provider as a fallback,
+then continues to chunk → embed as usual.
+
+- **Default:** Claude vision (`claude-haiku-4-5`), which reuses your existing
+  `ANTHROPIC_API_KEY` — no new vendor or key to configure.
+- **Swappable:** set `OCR_PROVIDER` to choose the engine. `claude` (default),
+  or `none` to disable OCR (textless PDFs then fail fast with a clear reason).
+  The provider lives behind a small interface in
+  [`packages/retrieval/src/providers/ocr`](./packages/retrieval/src/providers/ocr),
+  so adding a cheaper per-page engine (e.g. Mistral OCR) later is a one-file
+  drop-in, not a pipeline change.
+- **Cost:** OCR only runs on the rare image-only upload. Claude vision is
+  pennies per document at that volume; a dedicated OCR API is cheaper per page
+  if you ever ingest scans at scale.
 
 ### How a question is answered — RAG + citations
 
