@@ -11,6 +11,22 @@
 const MARKER_RE =
   /\[([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\]/gi;
 
+// Like MARKER_RE but also eats any whitespace immediately before the marker,
+// so removing "claim [uuid]." yields "claim." rather than "claim ." Only used
+// by stripCitationMarkers (extractCitations must preserve prose exactly).
+const MARKER_WITH_LEADING_WS_RE =
+  /\s*\[[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\]/gi;
+
+/**
+ * Strip all `[<uuid>]` citation markers (and the space they follow), leaving
+ * the surrounding prose intact. Used when feeding prior assistant turns back as
+ * conversation history — the chunk ids are this-turn-specific, so carrying them
+ * forward is just noise.
+ */
+export function stripCitationMarkers(content: string): string {
+  return content.replace(MARKER_WITH_LEADING_WS_RE, '');
+}
+
 export interface ExtractedCitations {
   /** Final content with invalid markers removed. */
   cleanedContent: string;

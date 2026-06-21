@@ -9,11 +9,14 @@ import {
   getCitationsForMessages,
   insertMessage,
   listChatMessages,
+  listRecentChatMessages,
 } from '../../../../../lib/chats-store';
 import {
   FEATURE_NOT_AVAILABLE_CODE,
   toContractMessage,
 } from '../../../../../lib/chats';
+import { stripCitationMarkers } from '../../../../../lib/chat/citations';
+import type { MessageRow } from '../../../../../lib/chats';
 import { problemResponse, unauthorized } from '../../../../../lib/problem';
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from '../../../../../lib/documents';
 import { checkTier1FeatureGuards } from '../../route';
@@ -29,6 +32,37 @@ type Params = { params: Promise<{ chat_id: string }> };
 
 const MAX_CONTENT = 32000;
 const DEFAULT_TOP_K = 8;
+// Conversation-memory bounds: take at most this many prior turns, then trim the
+// oldest until under the char budget so a long chat can't blow the context.
+const HISTORY_MAX_MESSAGES = 30;
+const HISTORY_CHAR_BUDGET = 16000;
+
+/**
+ * Turn stored message rows into the model's prior-turn history: drop the
+ * just-sent message, strip citation markers from assistant turns, trim the
+ * oldest to fit the budget, and ensure it starts with a `user` turn (the API
+ * requires the first message to be `user`).
+ */
+function buildChatHistory(
+  rows: MessageRow[],
+  excludeId: string,
+): Array<{ role: 'user' | 'assistant'; content: string }> {
+  const turns = rows
+    .filter((r) => r.id !== excludeId && (r.role === 'user' || r.role === 'assistant'))
+    .map((r) => ({
+      role: r.role as 'user' | 'assistant',
+      content: r.role === 'assistant' ? stripCitationMarkers(r.content) : r.content,
+    }));
+
+  let total = turns.reduce((n, t) => n + t.content.length, 0);
+  while (turns.length > 0 && total > HISTORY_CHAR_BUDGET) {
+    total -= turns[0]!.content.length;
+    turns.shift();
+  }
+  // After trimming we may now start mid-exchange on an assistant turn.
+  while (turns.length > 0 && turns[0]!.role === 'assistant') turns.shift();
+  return turns;
+}
 
 function notFoundChat(): NextResponse {
   return problemResponse({ status: 404, code: 'chat.not_found', title: 'Not Found' });
@@ -166,6 +200,11 @@ export async function POST(request: Request, { params }: Params): Promise<Respon
     });
   }
 
+  // Conversation memory: load prior turns (excluding the message we just
+  // inserted) so the model can answer follow-ups in context.
+  const recent = await listRecentChatMessages(chat_id, HISTORY_MAX_MESSAGES);
+  const history = buildChatHistory(recent, userMessage.id);
+
   const rlsClient = await createSSRClient();
   const deps = buildOrchestratorDeps(rlsClient, workspace.id);
   const events = runChatTurn(deps, {
@@ -173,6 +212,7 @@ export async function POST(request: Request, { params }: Params): Promise<Respon
     userMessage: body.content,
     topK: typeof body.top_k === 'number' ? body.top_k : DEFAULT_TOP_K,
     model: typeof body.model === 'string' ? body.model : DEFAULT_CHAT_MODEL,
+    history,
   });
   return sseResponse(events);
 }
