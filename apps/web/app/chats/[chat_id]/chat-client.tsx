@@ -1,12 +1,19 @@
 'use client';
 // SPDX-License-Identifier: Apache-2.0
 import { useEffect, useRef, useState } from 'react';
+import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { components } from '@document-chat/contracts';
 import { useChatStream } from '../../../lib/chat/use-chat-stream';
 import { CitationChip } from './citation-chip';
 import { CitationDrawer } from './citation-drawer';
 
 type Message = components['schemas']['Message'];
+type Citation = components['schemas']['Citation'];
+
+/** Matches `[<uuid>]` citation markers in assistant content. */
+const CITATION_MARKER_RE =
+  /\[([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\]/gi;
 
 export interface ChatClientProps {
   chatId: string;
@@ -107,24 +114,20 @@ export function ChatClient({ chatId, initialMessages, autoSendContent }: ChatCli
           <li className="message" data-role="assistant" data-testid="streaming-message">
             <div className="message__bubble">
               <span className="message__role">assistant</span>
-              <span
+              <div
                 data-testid="streaming-content"
                 className={stream.status === 'streaming' ? 'streaming-cursor' : undefined}
               >
-                {stream.content || '…'}
-              </span>
-              {stream.citations.length > 0 ? (
-                <span data-testid="streaming-citations">
-                  {' '}
-                  {stream.citations.map((citation, i) => (
-                    <CitationChip
-                      key={citation.id}
-                      label={String(i + 1)}
-                      onClick={() => setDrawerChunkId(citation.chunk_id)}
-                    />
-                  ))}
-                </span>
-              ) : null}
+                {stream.content ? (
+                  <AssistantMarkdown
+                    content={stream.content}
+                    citations={stream.citations}
+                    onCite={setDrawerChunkId}
+                  />
+                ) : (
+                  '…'
+                )}
+              </div>
             </div>
           </li>
         ) : null}
@@ -166,9 +169,63 @@ export function ChatClient({ chatId, initialMessages, autoSendContent }: ChatCli
 }
 
 /**
- * Render a message body. Persisted assistant messages may carry inline
- * `[<chunk-uuid>]` markers — replace each with a CitationChip the user can
- * click to open the source drawer.
+ * Render assistant content as markdown, with inline `[<chunk-uuid>]` markers
+ * turned into clickable CitationChips. We rewrite each marker to a markdown
+ * link `[<n>](citation:<uuid>)` before parsing, then override the link renderer
+ * to emit a chip for `citation:` hrefs — so markdown formatting and citations
+ * both render without one breaking the other. (react-markdown ignores raw HTML
+ * by default, so this is XSS-safe.)
+ */
+function AssistantMarkdown({
+  content,
+  citations,
+  onCite,
+}: {
+  content: string;
+  citations: Citation[];
+  onCite: (chunkId: string) => void;
+}) {
+  // 1-based chip labels, looked up by chunk_id.
+  const labelByChunkId = new Map(
+    citations.map((c, i) => [c.chunk_id.toLowerCase(), String(i + 1)] as const),
+  );
+  const linkified = content.replace(CITATION_MARKER_RE, (_marker, idRaw: string) => {
+    const id = idRaw.toLowerCase();
+    const label = labelByChunkId.get(id);
+    return label ? `[${label}](citation:${id})` : '';
+  });
+
+  return (
+    <div className="message__markdown">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        // Keep our internal `citation:` links (the default transform would strip
+        // the unknown scheme); still sanitize every other URL.
+        urlTransform={(url) => (url.startsWith('citation:') ? url : defaultUrlTransform(url))}
+        components={{
+          a({ href, children }) {
+            if (href && href.startsWith('citation:')) {
+              const chunkId = href.slice('citation:'.length);
+              const label = String(Array.isArray(children) ? children.join('') : (children ?? ''));
+              return <CitationChip label={label} onClick={() => onCite(chunkId)} />;
+            }
+            return (
+              <a href={href} target="_blank" rel="noopener noreferrer">
+                {children}
+              </a>
+            );
+          },
+        }}
+      >
+        {linkified}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
+/**
+ * Render a message body. User messages are plain text; assistant messages go
+ * through {@link AssistantMarkdown} (markdown + citation chips).
  */
 function MessageBody({
   message,
@@ -178,33 +235,5 @@ function MessageBody({
   onCite: (chunkId: string) => void;
 }) {
   if (message.role !== 'assistant') return <span>{message.content}</span>;
-
-  // chunk_id appears 1-based in the chip label for readability; we look up the
-  // index from the message's citations list.
-  const indexByChunkId = new Map(message.citations.map((c, i) => [c.chunk_id, i + 1] as const));
-
-  const parts: Array<string | { chunkId: string; label: string }> = [];
-  const re = /\[([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\]/gi;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(message.content)) !== null) {
-    if (match.index > lastIndex) parts.push(message.content.slice(lastIndex, match.index));
-    const chunkId = match[1]!.toLowerCase();
-    const label = String(indexByChunkId.get(chunkId) ?? '?');
-    parts.push({ chunkId, label });
-    lastIndex = match.index + match[0].length;
-  }
-  if (lastIndex < message.content.length) parts.push(message.content.slice(lastIndex));
-
-  return (
-    <span>
-      {parts.map((part, i) =>
-        typeof part === 'string' ? (
-          <span key={i}>{part}</span>
-        ) : (
-          <CitationChip key={i} label={part.label} onClick={() => onCite(part.chunkId)} />
-        ),
-      )}
-    </span>
-  );
+  return <AssistantMarkdown content={message.content} citations={message.citations} onCite={onCite} />;
 }
