@@ -47,7 +47,12 @@ export default async function ChatPage({
       <div className="page-header">
         <div className="page-header__title">
           <h1>{chat.title}</h1>
-          <p className="subtle">Created {new Date(chat.created_at).toLocaleString()}</p>
+          <p className="subtle">
+            Created {new Date(chat.created_at).toLocaleString()}
+            {chat.last_message_at
+              ? ` · Last updated ${new Date(chat.last_message_at).toLocaleString()}`
+              : ''}
+          </p>
         </div>
         <Link href="/chats" className="btn btn--ghost btn--sm">
           ← All chats

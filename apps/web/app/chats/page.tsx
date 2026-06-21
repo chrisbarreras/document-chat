@@ -62,7 +62,7 @@ export default async function ChatsPage({
             <thead>
               <tr>
                 <th>Title</th>
-                <th>Last activity</th>
+                <th>Last updated</th>
                 <th>Created</th>
               </tr>
             </thead>
