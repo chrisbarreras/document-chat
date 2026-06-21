@@ -1,18 +1,25 @@
 'use client';
 // SPDX-License-Identifier: Apache-2.0
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { IngestionBadge } from './ingestion-badge';
 
-type Phase = 'idle' | 'requesting' | 'uploading' | 'finalizing' | 'done' | 'error';
+type ItemStatus = 'requesting' | 'uploading' | 'finalizing' | 'done' | 'error';
 
-const PHASE_COPY: Record<Phase, string> = {
-  idle: 'Upload',
+interface UploadItem {
+  key: number;
+  name: string;
+  status: ItemStatus;
+  documentId: string | null;
+  error: string | null;
+}
+
+const STATUS_LABEL: Record<ItemStatus, string> = {
   requesting: 'Requesting…',
   uploading: 'Uploading…',
   finalizing: 'Finalizing…',
-  done: 'Upload',
-  error: 'Upload',
+  done: 'Uploaded —',
+  error: 'Failed',
 };
 
 async function readDetail(res: Response, fallback: string): Promise<string> {
@@ -24,117 +31,169 @@ async function readDetail(res: Response, fallback: string): Promise<string> {
   }
 }
 
+function isPdf(file: File): boolean {
+  return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+}
+
+/**
+ * Run a single file through the three-step upload (sign → PUT → finalize).
+ * Reports each phase via `onPhase`; resolves with the created document id.
+ */
+async function uploadOne(file: File, onPhase: (status: ItemStatus) => void): Promise<string> {
+  const contentType = file.type || 'application/pdf';
+
+  onPhase('requesting');
+  const uploadRes = await fetch('/api/documents/uploads', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ filename: file.name, size_bytes: file.size, content_type: contentType }),
+  });
+  if (!uploadRes.ok) throw new Error(await readDetail(uploadRes, 'Could not start the upload.'));
+  const { upload_id, signed_url } = await uploadRes.json();
+
+  onPhase('uploading');
+  const putRes = await fetch(signed_url, {
+    method: 'PUT',
+    body: file,
+    headers: { 'content-type': contentType },
+  });
+  if (!putRes.ok) throw new Error('Uploading the file to storage failed.');
+
+  onPhase('finalizing');
+  const finalizeRes = await fetch('/api/documents', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ upload_id, title: file.name.replace(/\.pdf$/i, '') }),
+  });
+  if (!finalizeRes.ok) throw new Error(await readDetail(finalizeRes, 'Could not finalize the document.'));
+  const created = (await finalizeRes.json().catch(() => ({}))) as { id?: string };
+  return created.id ?? '';
+}
+
+/**
+ * Multi-file uploader. Accepts drag-and-drop or multi-select; each PDF is
+ * uploaded straight to Storage via a signed URL (never through the API) and
+ * tracked independently with a live ingestion badge. Non-PDFs are ignored.
+ */
 export function UploadForm() {
   const router = useRouter();
-  const [file, setFile] = useState<File | null>(null);
-  const [title, setTitle] = useState('');
-  const [phase, setPhase] = useState<Phase>('idle');
-  const [error, setError] = useState<string | null>(null);
-  const [uploadedId, setUploadedId] = useState<string | null>(null);
+  const [items, setItems] = useState<UploadItem[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const nextKey = useRef(0);
 
-  const busy = phase === 'requesting' || phase === 'uploading' || phase === 'finalizing';
+  const busy = items.some((i) => i.status !== 'done' && i.status !== 'error');
 
-  function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const selected = event.target.files?.[0] ?? null;
-    setFile(selected);
-    if (selected && !title) setTitle(selected.name.replace(/\.pdf$/i, ''));
+  function update(key: number, patch: Partial<UploadItem>) {
+    setItems((prev) => prev.map((i) => (i.key === key ? { ...i, ...patch } : i)));
   }
 
-  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!file) return;
-    // Capture the form element now: React nulls `event.currentTarget` once the
-    // handler yields at the first `await`, so reading it later threw
-    // "Cannot read properties of null (reading 'reset')".
-    const form = event.currentTarget;
-    setError(null);
-    const contentType = file.type || 'application/pdf';
+  const handleFiles = useCallback(
+    async (fileList: FileList | File[]) => {
+      const pdfs = Array.from(fileList).filter(isPdf);
+      if (pdfs.length === 0) return;
 
-    try {
-      // 1. Ask the API for a signed upload URL.
-      setPhase('requesting');
-      const uploadRes = await fetch('/api/documents/uploads', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ filename: file.name, size_bytes: file.size, content_type: contentType }),
-      });
-      if (!uploadRes.ok) throw new Error(await readDetail(uploadRes, 'Could not start the upload.'));
-      const { upload_id, signed_url } = await uploadRes.json();
+      const queued = pdfs.map((file) => ({
+        key: nextKey.current++,
+        name: file.name,
+        status: 'requesting' as ItemStatus,
+        documentId: null,
+        error: null,
+      }));
+      // Newest on top so a fresh batch is visible above older rows.
+      setItems((prev) => [...queued.slice().reverse(), ...prev]);
 
-      // 2. Upload the bytes straight to Storage (never through the API).
-      setPhase('uploading');
-      const putRes = await fetch(signed_url, {
-        method: 'PUT',
-        body: file,
-        headers: { 'content-type': contentType },
-      });
-      if (!putRes.ok) throw new Error('Uploading the file to storage failed.');
-
-      // 3. Finalize: create the document record.
-      setPhase('finalizing');
-      const finalizeRes = await fetch('/api/documents', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ upload_id, title: title.trim() || file.name }),
-      });
-      if (!finalizeRes.ok) throw new Error(await readDetail(finalizeRes, 'Could not finalize the document.'));
-      const created = (await finalizeRes.json().catch(() => ({}))) as { id?: string };
-
-      setUploadedId(created.id ?? null);
-      setPhase('done');
-      setFile(null);
-      setTitle('');
-      form.reset();
+      // Upload sequentially — keeps the signed-URL + Storage load gentle and
+      // the UI legible. Each row updates independently as it progresses.
+      for (let i = 0; i < pdfs.length; i++) {
+        const item = queued[i]!;
+        try {
+          const id = await uploadOne(pdfs[i]!, (status) => update(item.key, { status }));
+          update(item.key, { status: 'done', documentId: id });
+        } catch (err) {
+          update(item.key, {
+            status: 'error',
+            error: err instanceof Error ? err.message : 'Upload failed.',
+          });
+        }
+      }
       router.refresh();
-    } catch (err) {
-      setPhase('error');
-      setError(err instanceof Error ? err.message : 'Upload failed.');
-    }
+    },
+    [router],
+  );
+
+  function onDrop(event: React.DragEvent) {
+    event.preventDefault();
+    setDragOver(false);
+    if (event.dataTransfer?.files?.length) void handleFiles(event.dataTransfer.files);
   }
 
   return (
     <section className="card">
-      <h2 className="card__title">Upload a PDF</h2>
-      <form onSubmit={onSubmit}>
-        <label className="field">
-          <span className="field__label">File</span>
-          <input
-            className="input"
-            type="file"
-            accept="application/pdf,.pdf"
-            onChange={onFileChange}
-            required
-          />
-        </label>
-        <label className="field">
-          <span className="field__label">Title</span>
-          <input
-            className="input"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Document title"
-          />
-        </label>
-        <div className="form-actions">
-          <button type="submit" className="btn" disabled={!file || busy}>
-            {PHASE_COPY[phase]}
-          </button>
-          {phase === 'done' ? (
-            <span role="status" className="form-status form-status--success">
-              Uploaded —{' '}
-              {uploadedId ? (
-                <IngestionBadge documentId={uploadedId} initialState="pending" showError />
-              ) : (
-                'processing will begin shortly.'
-              )}
-            </span>
-          ) : null}
-        </div>
-      </form>
-      {error ? (
-        <p role="alert" className="alert">
-          {error}
+      <h2 className="card__title">Upload PDFs</h2>
+      <div
+        className={`dropzone${dragOver ? ' dropzone--over' : ''}`}
+        data-testid="dropzone"
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={onDrop}
+        onClick={() => inputRef.current?.click()}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
+      >
+        <p>
+          <strong>Drag &amp; drop PDFs here</strong>, or click to choose files.
+        </p>
+        <p className="muted">You can select multiple files at once.</p>
+        <input
+          ref={inputRef}
+          className="visually-hidden"
+          type="file"
+          accept="application/pdf,.pdf"
+          multiple
+          onChange={(e) => {
+            if (e.target.files?.length) void handleFiles(e.target.files);
+            e.target.value = ''; // allow re-selecting the same file(s)
+          }}
+        />
+      </div>
+
+      {items.length > 0 ? (
+        <ul className="upload-list" data-testid="upload-list">
+          {items.map((item) => (
+            <li key={item.key} className="upload-list__item">
+              <span className="upload-list__name">{item.name}</span>
+              <span className="upload-list__status">
+                {item.status === 'done' && item.documentId ? (
+                  <>
+                    {STATUS_LABEL.done}{' '}
+                    <IngestionBadge documentId={item.documentId} initialState="pending" showError />
+                  </>
+                ) : item.status === 'error' ? (
+                  <span role="alert" className="alert alert--inline">
+                    {item.error ?? 'Upload failed.'}
+                  </span>
+                ) : (
+                  <span className="muted">{STATUS_LABEL[item.status]}</span>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {busy ? (
+        <p role="status" className="visually-hidden">
+          Uploading…
         </p>
       ) : null}
     </section>
