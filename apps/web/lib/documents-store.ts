@@ -30,6 +30,27 @@ export async function mintUploadUrl(objectKey: string): Promise<{ signedUrl: str
   return { signedUrl };
 }
 
+/**
+ * Mint a short-lived signed URL for downloading a stored document. `downloadName`
+ * sets the Content-Disposition filename so the browser saves it sensibly.
+ */
+export async function mintDownloadUrl(
+  objectKey: string,
+  expiresInSeconds: number,
+  downloadName?: string,
+): Promise<{ signedUrl: string } | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage
+    .from(DOCUMENTS_BUCKET)
+    .createSignedUrl(objectKey, expiresInSeconds, downloadName ? { download: downloadName } : undefined);
+  if (error || !data) return null;
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  const signedUrl = data.signedUrl.startsWith('http')
+    ? data.signedUrl
+    : `${base}/storage/v1${data.signedUrl}`;
+  return { signedUrl };
+}
+
 /** Look up an uploaded object's size/type to validate finalize. Null if absent. */
 export async function findUploadedObject(
   workspaceId: string,
