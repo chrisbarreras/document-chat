@@ -32,9 +32,14 @@ export default async function DocumentDetailPage({
             <IngestionBadge documentId={doc.id} initialState={doc.ingestion_state} />
           </p>
         </div>
-        <Link href="/documents" className="btn btn--ghost btn--sm">
-          ← Back to documents
-        </Link>
+        <div className="page-header__actions">
+          <a href={`/api/documents/${doc.id}/download`} className="btn btn--secondary btn--sm">
+            Download PDF
+          </a>
+          <Link href="/documents" className="btn btn--ghost btn--sm">
+            ← Back to documents
+          </Link>
+        </div>
       </div>
 
       <section className="card">

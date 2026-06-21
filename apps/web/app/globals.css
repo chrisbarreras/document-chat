@@ -224,6 +224,13 @@ main {
   flex-wrap: wrap;
 }
 
+.page-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .page-header__title h1 {
   margin-bottom: 0.25rem;
 }
