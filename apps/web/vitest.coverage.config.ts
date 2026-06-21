@@ -13,6 +13,7 @@ export default defineConfig({
       'app/**/*.test.ts',
       'app/**/*.test.tsx',
       'lib/**/*.test.ts',
+      '*.test.ts',
       '**/*.integration.test.ts',
     ],
     exclude: ['e2e/**', 'node_modules/**', '.next/**'],
