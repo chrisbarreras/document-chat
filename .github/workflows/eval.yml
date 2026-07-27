@@ -54,7 +54,7 @@ jobs:
   # of walltime; a hang anywhere short-circuits the job.
   eval-live:
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: false # disabled for fork: prevent automatic live eval runs
     timeout-minutes: 60
     env:
       EVAL_API_BASE_URL: ${{ secrets.EVAL_API_BASE_URL }}
